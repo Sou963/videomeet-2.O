@@ -65,7 +65,7 @@ The frontend and backend are in separate GitHub repositories, so deploy them wit
 1. Create a Render Blueprint from the backend repository (`Sou963/videomeet-backend`). When prompted, provide `MONGODB_URI` from MongoDB Atlas and the server-side `GEMINI_API_KEY`; Render generates `JWT_SECRET`.
 2. Create a second Render Blueprint from the frontend repository (`Sou963/videomeet-2.O`).
 3. Make sure MongoDB Atlas permits connections from the backend service. Do not commit credentials or add Gemini keys to frontend environment variables.
-4. The Render URLs are configured in each repository's `render.yaml`. If you change either service name or URL, update `CLIENT_URL` in the backend blueprint and the API/socket URLs in the frontend blueprint.
+4. The Render URLs are configured in each repository's `render.yaml`. If you change either service URL, update `CLIENT_URL` in the backend blueprint and the API/socket URLs in the frontend blueprint.
 5. Deploy both services. The backend health check is `/api/health`.
 
 The free Render plan may spin services down while idle, so the first request after inactivity can take longer. Production video calls and translations also require valid camera/microphone permissions and a Gemini API key.

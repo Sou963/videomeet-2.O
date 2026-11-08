@@ -9,6 +9,6 @@ services:
       - key: NODE_VERSION
         value: 22.16.0
       - key: NEXT_PUBLIC_API_URL
-        value: https://videomeet-backend-sou963.onrender.com/api
+        value: https://videomeet-backend-ao7d.onrender.com/api
       - key: NEXT_PUBLIC_SOCKET_URL
-        value: https://videomeet-backend-sou963.onrender.com
+        value: https://videomeet-backend-ao7d.onrender.com
