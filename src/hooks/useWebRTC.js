@@ -310,9 +310,14 @@ export default function useWebRTC({
         setError(message);
       }
 
-      function onConnectError() {
+      function onConnectError(connectError) {
+        console.error("[WebRTC] Signaling connection failed", {
+          message: connectError.message,
+        });
         setConnectionState("error");
-        setError("Unable to reach the meeting signaling server.");
+        setError(
+          "Cannot reach the meeting server. It may be suspended or unavailable; check the backend deployment."
+        );
       }
 
       // Register all listeners
