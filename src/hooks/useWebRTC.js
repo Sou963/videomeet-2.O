@@ -95,7 +95,6 @@ export default function useWebRTC({
         onRemoteStream: (pid, stream) => {
           updateRemoteParticipant(pid, { stream });
         },
-        onDisconnected: (pid) => removePeer(pid),
       });
 
       peersRef.current[peerId] = { ...peer, name: peerName };
@@ -224,7 +223,6 @@ export default function useWebRTC({
               meetingId,
               socket,
               onRemoteStream: (pid, s) => updateRemoteParticipant(pid, { stream: s }),
-              onDisconnected: (pid) => removePeer(pid),
             });
             peersRef.current[from] = { ...peer, name: "Participant" };
             updateRemoteParticipant(from, { name: "Participant", stream: null });

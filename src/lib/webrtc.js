@@ -22,7 +22,8 @@ export async function getIceServers() {
   try {
     const data = await api("/webrtc/ice-servers");
     cachedIceServers = data.iceServers;
-  } catch {
+  } catch (error) {
+    console.warn("[WebRTC] Could not load configured ICE servers; using STUN only:", error.message);
     cachedIceServers = [{ urls: "stun:stun.l.google.com:19302" }];
   }
   return cachedIceServers;
@@ -55,13 +56,16 @@ export function createPeer({
   meetingId,
   socket,
   onRemoteStream,
-  onDisconnected,
 }) {
   const pc = new RTCPeerConnection({ iceServers });
 
   // Queue ICE candidates that arrive before remote description is set
   let remoteDescriptionSet = false;
   const candidateQueue = [];
+  let disconnectTimer = null;
+  let restartInProgress = false;
+  let restartAttempts = 0;
+  let lastRestartRequestAt = 0;
 
   // Add local tracks
   if (localStream) {
@@ -76,37 +80,82 @@ export function createPeer({
 
   // ── Send ICE candidates to remote peer ───────────────────────────
   pc.onicecandidate = (event) => {
-    if (!event.candidate || !socket?.connected) return;
+    if (!event.candidate) return;
     socket.emit("webrtc-signal", {
       meetingId,
       targetId: peerId,
-      signal: { type: "candidate", candidate: event.candidate },
+      signal: { type: "candidate", candidate: event.candidate.toJSON() },
     });
   };
 
-  // ── Monitor connection state ─────────────────────────────────────
-  pc.onconnectionstatechange = () => {
-    const state = pc.connectionState;
-    if (state === "failed" || state === "closed") {
-      onDisconnected(peerId);
+  async function restartIce() {
+    if (
+      myId > peerId ||
+      restartInProgress ||
+      restartAttempts >= 3 ||
+      pc.signalingState !== "stable" ||
+      !socket.connected
+    ) {
+      return;
     }
-  };
 
+    restartInProgress = true;
+    restartAttempts += 1;
+    try {
+      const offer = await pc.createOffer({ iceRestart: true });
+      await pc.setLocalDescription(offer);
+      socket.emit("webrtc-signal", {
+        meetingId,
+        targetId: peerId,
+        signal: offer,
+      });
+    } catch (err) {
+      console.warn("[WebRTC] ICE restart failed:", err.message);
+    } finally {
+      restartInProgress = false;
+    }
+  }
+
+  function requestIceRestart() {
+    if (myId < peerId) {
+      restartIce();
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastRestartRequestAt < 10000 || !socket.connected) return;
+    lastRestartRequestAt = now;
+    socket.emit("webrtc-signal", {
+      meetingId,
+      targetId: peerId,
+      signal: { type: "ice-restart-request" },
+    });
+  }
+
+  // ── Monitor connection state ─────────────────────────────────────
   pc.oniceconnectionstatechange = () => {
-    if (pc.iceConnectionState === "disconnected") {
-      // Give it a few seconds — ICE might recover
-      setTimeout(() => {
-        if (pc.iceConnectionState === "disconnected") {
-          onDisconnected(peerId);
-        }
-      }, 5000);
+    if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+      clearTimeout(disconnectTimer);
+      disconnectTimer = null;
+      restartAttempts = 0;
+    } else if (pc.iceConnectionState === "failed") {
+      clearTimeout(disconnectTimer);
+      disconnectTimer = null;
+      requestIceRestart();
+    } else if (pc.iceConnectionState === "disconnected" && !disconnectTimer) {
+      disconnectTimer = setTimeout(() => {
+        disconnectTimer = null;
+        if (pc.iceConnectionState === "disconnected") requestIceRestart();
+      }, 10000);
     }
   };
 
   // ── Signal handler ───────────────────────────────────────────────
   async function handleSignal(signal) {
     try {
-      if (signal.type === "offer") {
+      if (signal.type === "ice-restart-request") {
+        await restartIce();
+      } else if (signal.type === "offer") {
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
         remoteDescriptionSet = true;
         // Flush queued candidates
@@ -154,13 +203,13 @@ export function createPeer({
         });
       } catch (err) {
         console.warn("[WebRTC] Offer creation error:", err.message);
-        onDisconnected(peerId);
       }
     }
     // If myId > peerId, we wait for the other peer to send us an offer.
   }
 
   function close() {
+    clearTimeout(disconnectTimer);
     try {
       pc.close();
     } catch {
