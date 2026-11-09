@@ -38,6 +38,7 @@ export default function MeetingRoom({
     localStream,
     remoteParticipants,
     connectionState,
+    turnConfigured,
     error,
     micEnabled,
     cameraEnabled,
@@ -213,6 +214,16 @@ export default function MeetingRoom({
     <div className="relative flex h-screen w-screen flex-col bg-[#080B14] text-[#F8FAFC] overflow-hidden select-none">
       {/* ── Toast Notifications ───────────────────────────────────── */}
       <MeetingToast toast={toast} onDismiss={() => setToast(null)} />
+      {turnConfigured === false && (
+        <div className="z-20 border-b border-amber-500/40 bg-amber-950/80 px-4 py-2 text-center text-xs text-amber-200">
+          TURN relay is not configured on the backend. Calls may fail across restrictive networks.
+        </div>
+      )}
+      {error && (
+        <div role="alert" className="z-20 border-b border-red-500/40 bg-red-950/80 px-4 py-2 text-center text-xs text-red-200">
+          {error}
+        </div>
+      )}
 
       {/* ── Top Meeting Header ────────────────────────────────────── */}
       <MeetingHeader

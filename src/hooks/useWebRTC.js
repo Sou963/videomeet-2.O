@@ -34,6 +34,7 @@ export default function useWebRTC({
   const socketRef = useRef(null);
   const localStreamRef = useRef(null);
   const peersRef = useRef({}); // { [peerId]: { pc, close, handleSignal, maybeCreateOffer, name } }
+  const peerStatesRef = useRef({});
   const iceServersRef = useRef(null);
   const mountedRef = useRef(true);
   const joinedRef = useRef(false);
@@ -45,6 +46,7 @@ export default function useWebRTC({
   const [remoteParticipants, setRemoteParticipants] = useState([]);
   // Each entry: { peerId, name, stream, audio, video }
   const [connectionState, setConnectionState] = useState("connecting");
+  const [turnConfigured, setTurnConfigured] = useState(null);
   const [error, setError] = useState("");
   const [micEnabled, setMicEnabled] = useState(initialMicEnabled);
   const [cameraEnabled, setCameraEnabled] = useState(initialCameraEnabled);
@@ -64,11 +66,30 @@ export default function useWebRTC({
     });
   }, []);
 
+  const updatePeerConnectionStatus = useCallback(
+    (peerId, status) => {
+      peerStatesRef.current[peerId] = status;
+      updateRemoteParticipant(peerId, { connectionState: status });
+
+      const statuses = Object.values(peerStatesRef.current);
+      if (statuses.includes("connected")) setConnectionState("connected");
+      else if (statuses.includes("reconnecting")) setConnectionState("reconnecting");
+      else if (statuses.length && statuses.every((state) => state === "failed")) {
+        setConnectionState("failed");
+      } else if (statuses.length) setConnectionState("waiting");
+    },
+    [updateRemoteParticipant]
+  );
+
   const removePeer = useCallback((peerId) => {
     const entry = peersRef.current[peerId];
     if (entry) {
       entry.close();
       delete peersRef.current[peerId];
+    }
+    delete peerStatesRef.current[peerId];
+    if (Object.keys(peerStatesRef.current).length === 0) {
+      setConnectionState(socketRef.current?.connected ? "waiting" : "connecting");
     }
     setRemoteParticipants((prev) => prev.filter((p) => p.peerId !== peerId));
     setRaisedHands((prev) => {
@@ -95,9 +116,11 @@ export default function useWebRTC({
         onRemoteStream: (pid, stream) => {
           updateRemoteParticipant(pid, { stream });
         },
+        onConnectionStatus: updatePeerConnectionStatus,
       });
 
       peersRef.current[peerId] = { ...peer, name: peerName };
+      peerStatesRef.current[peerId] = "connecting";
 
       // Show placeholder immediately so UI updates
       updateRemoteParticipant(peerId, {
@@ -105,12 +128,13 @@ export default function useWebRTC({
         stream: null,
         audio: true,
         video: true,
+        connectionState: "connecting",
       });
 
       // Deterministic: only one side creates the offer
       await peer.maybeCreateOffer();
     },
-    [meetingId, updateRemoteParticipant, removePeer]
+    [meetingId, updateRemoteParticipant, updatePeerConnectionStatus]
   );
 
   // ── Main connection effect ──────────────────────────────────────
@@ -122,7 +146,14 @@ export default function useWebRTC({
 
     async function init() {
       // 1. Fetch ICE servers
-      iceServersRef.current = await getIceServers();
+      const iceConfiguration = await getIceServers();
+      iceServersRef.current = iceConfiguration.iceServers;
+      setTurnConfigured(iceConfiguration.turnConfigured);
+      if (!iceConfiguration.turnConfigured && process.env.NODE_ENV === "development") {
+        console.warn(
+          "[WebRTC] TURN is not configured on the backend; calls may fail on restrictive networks."
+        );
+      }
 
       // 2. Get local media
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -171,6 +202,7 @@ export default function useWebRTC({
       function onConnect() {
         if (joinedRef.current) return;
         joinedRef.current = true;
+        console.info("[WebRTC] Signaling socket connected", { socketId: socket.id });
         socket.emit("join-room", { meetingId, name });
         socket.emit("media-status", {
           meetingId,
@@ -178,7 +210,17 @@ export default function useWebRTC({
           video: cameraEnabledRef.current,
           screenSharing: Boolean(screenStreamRef.current),
         });
-        setConnectionState("connected");
+        setConnectionState("waiting");
+      }
+
+      function onSocketDisconnect(reason) {
+        console.warn("[WebRTC] Signaling socket disconnected", { reason });
+        joinedRef.current = false;
+        setConnectionState("reconnecting");
+        Object.values(peersRef.current).forEach((entry) => entry.close());
+        peersRef.current = {};
+        peerStatesRef.current = {};
+        setRemoteParticipants([]);
       }
 
       function onRoomMembers(members = []) {
@@ -223,9 +265,15 @@ export default function useWebRTC({
               meetingId,
               socket,
               onRemoteStream: (pid, s) => updateRemoteParticipant(pid, { stream: s }),
+              onConnectionStatus: updatePeerConnectionStatus,
             });
             peersRef.current[from] = { ...peer, name: "Participant" };
-            updateRemoteParticipant(from, { name: "Participant", stream: null });
+            updateRemoteParticipant(from, {
+              name: "Participant",
+              stream: null,
+              connectionState: "connecting",
+            });
+            peerStatesRef.current[from] = "connecting";
             await peer.handleSignal(signal);
           })();
         }
@@ -269,6 +317,7 @@ export default function useWebRTC({
 
       // Register all listeners
       socket.on("connect", onConnect);
+      socket.on("disconnect", onSocketDisconnect);
       socket.on("room-members", onRoomMembers);
       socket.on("peer-joined", onPeerJoined);
       socket.on("peer-left", onPeerLeft);
@@ -285,6 +334,11 @@ export default function useWebRTC({
       if (socket.connected && !joinedRef.current) {
         onConnect();
       }
+
+      console.info("[WebRTC] Local media tracks", {
+        audioTracks: stream.getAudioTracks().length,
+        videoTracks: stream.getVideoTracks().length,
+      });
     }
 
     init();
@@ -460,6 +514,7 @@ export default function useWebRTC({
     localStream,
     remoteParticipants,
     connectionState,
+    turnConfigured,
     error,
     micEnabled,
     cameraEnabled,

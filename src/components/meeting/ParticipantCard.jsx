@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import useAudioActivity from "@/hooks/useAudioActivity";
 import { MicOffIcon, CrownIcon } from "./icons";
 
@@ -15,11 +15,35 @@ export default function ParticipantCard({
 }) {
   const videoRef = useRef(null);
   const audioRef = useRef(null);
+  const [audioBlocked, setAudioBlocked] = useState(false);
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.srcObject = participant.stream || null;
-    if (audioRef.current) audioRef.current.srcObject = participant.stream || null;
-  }, [participant.stream]);
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.srcObject = participant.stream || null;
+    if (!participant.stream || muteOriginalAudio) {
+      return;
+    }
+
+    audio.play().then(
+      () => setAudioBlocked(false),
+      (error) => {
+        if (error.name === "NotAllowedError") setAudioBlocked(true);
+        else console.warn("[WebRTC] Remote audio playback failed:", error.message);
+      }
+    );
+  }, [participant.stream, muteOriginalAudio]);
+
+  async function enableAudio() {
+    try {
+      await audioRef.current?.play();
+      setAudioBlocked(false);
+    } catch (error) {
+      console.warn("[WebRTC] Remote audio playback failed:", error.message);
+    }
+  }
 
   const hasVideo = participant.video !== false && !!participant.stream;
   const hasAudio = participant.audio !== false;
@@ -54,7 +78,17 @@ export default function ParticipantCard({
         </div>
       )}
 
-      <audio ref={audioRef} autoPlay muted={muteOriginalAudio} className="hidden" />
+      <audio ref={audioRef} autoPlay playsInline muted={muteOriginalAudio} className="hidden" />
+
+      {audioBlocked && participant.stream && !muteOriginalAudio && (
+        <button
+          type="button"
+          onClick={enableAudio}
+          className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-[#38BDF8] px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg"
+        >
+          Enable audio
+        </button>
+      )}
 
       {/* ── Top Bar: Badges & Screen Sharing ──────────────────────── */}
       <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
@@ -123,7 +157,15 @@ export default function ParticipantCard({
       {!participant.stream && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#101624]/90 backdrop-blur-xs">
           <div className="h-7 w-7 animate-spin rounded-full border-2 border-slate-700 border-t-[#38BDF8]" />
-          <p className="mt-2 text-xs font-medium text-slate-400">Connecting video…</p>
+          <p className="mt-2 text-xs font-medium text-slate-400">
+            {participant.connectionState === "failed"
+              ? "Connection failed"
+              : participant.connectionState === "reconnecting"
+                ? "Reconnecting…"
+                : participant.connectionState === "waiting"
+                  ? "Waiting for ICE…"
+                  : "Connecting video…"}
+          </p>
         </div>
       )}
     </div>

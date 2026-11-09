@@ -32,6 +32,10 @@ The authenticated Express endpoint `POST /api/gemini/live-token` checks meeting 
    JWT_SECRET=your_jwt_secret
    CLIENT_URL=http://localhost:3000
    GEMINI_API_KEY=your_gemini_api_key
+   TURN_URL=
+   TURN_USERNAME=
+   TURN_CREDENTIAL=
+   TURN_SHARED_SECRET=
    ```
 
 2. Start the backend:
@@ -56,7 +60,19 @@ The authenticated Express endpoint `POST /api/gemini/live-token` checks meeting 
    npm run dev
    ```
 
-   Open `http://localhost:3000`. Never place `GEMINI_API_KEY` in a `NEXT_PUBLIC_*` variable or browser storage.
+   Open `http://localhost:3000`. Never place `GEMINI_API_KEY` or TURN secrets in a `NEXT_PUBLIC_*` variable or browser storage.
+
+## Configure TURN for cross-network calls
+
+STUN can establish direct calls on many networks, but it cannot relay media when NATs or firewalls block the direct connection. Configure TURN on the **backend only**; do not set `NEXT_PUBLIC_TURN_*`.
+
+1. Get TURN service details from a TURN provider, or run coturn with its REST API (`use-auth-secret` and `static-auth-secret`).
+2. Set `TURN_URL` on the backend to the provider's TURN URLs. Separate multiple transports with commas, for example `turn:turn.example.com:3478?transport=udp,turn:turn.example.com:3478?transport=tcp,turns:turn.example.com:5349?transport=tcp`. Use only URLs supported by your provider.
+3. For coturn REST authentication, set the shared secret as backend-only `TURN_SHARED_SECRET`; optionally set `TURN_USERNAME` as the username prefix. The backend generates one-hour credentials for each ICE configuration request. Never set the coturn shared secret as `TURN_CREDENTIAL`.
+4. For a provider that issues short-lived credentials directly, set its temporary `TURN_USERNAME` and `TURN_CREDENTIAL` on the backend. Do not use a permanent provider API key as `TURN_CREDENTIAL`; provider API keys must remain server-side.
+5. Redeploy the backend and check `/api/health`. It must report `"turnConfigured": true`. The authenticated `/api/webrtc/ice-servers` response should include a TURN entry. It does not expose a coturn shared secret.
+
+The backend's `server/.env.example` lists the supported variables. In Render, configure these in the backend service's environment settings (not the frontend service). TURN is required for reliable calls on restrictive networks; do not claim cross-network support until a relay candidate and media flow are verified.
 
 ## Deploy frontend and backend on Render
 
@@ -64,11 +80,11 @@ The frontend and backend are in separate GitHub repositories, so deploy them wit
 
 1. Create a Render Blueprint from the backend repository (`Sou963/videomeet-backend`). When prompted, provide `MONGODB_URI` from MongoDB Atlas and the server-side `GEMINI_API_KEY`; Render generates `JWT_SECRET`.
 2. Create a second Render Blueprint from the frontend repository (`Sou963/videomeet-2.O`).
-3. Make sure MongoDB Atlas permits connections from the backend service. Do not commit credentials or add Gemini keys to frontend environment variables.
+3. Make sure MongoDB Atlas permits connections from the backend service. Set TURN variables on the backend service only. Do not commit credentials or add Gemini/TURN secrets to frontend environment variables.
 4. The Render URLs are configured in each repository's `render.yaml`. If you change either service URL, update `CLIENT_URL` in the backend blueprint and the API/socket URLs in the frontend blueprint.
 5. Deploy both services. The backend health check is `/api/health`.
 
-The free Render plan may spin services down while idle, so the first request after inactivity can take longer. Production video calls and translations also require valid camera/microphone permissions and a Gemini API key.
+The deployment files in these repositories target Render. They do not configure Vercel or Railway. The free Render plan may spin services down while idle, so the first request after inactivity can take longer. Production video calls and translations also require valid camera/microphone permissions and a Gemini API key.
 
 ## Enable translation
 
