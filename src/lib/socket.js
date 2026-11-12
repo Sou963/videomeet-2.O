@@ -9,6 +9,7 @@ const SOCKET_URL = (
 ).replace(/\/+$/, "");
 
 let activeSocket = null;
+let activeMeetingToken = null;
 
 /**
  * Returns a shared Socket.IO instance. If one already exists and is
@@ -17,14 +18,16 @@ let activeSocket = null;
  * This avoids the bug where ChatPanel and MeetingRoom each created
  * their own socket causing duplicate join events and signaling races.
  */
-export function getSocket() {
-  if (activeSocket?.connected) return activeSocket;
+export function getSocket(meetingToken) {
+  if (activeSocket && activeMeetingToken === meetingToken) return activeSocket;
   if (activeSocket) {
     activeSocket.removeAllListeners();
     activeSocket.disconnect();
   }
+  activeMeetingToken = meetingToken;
   activeSocket = io(SOCKET_URL, {
-    withCredentials: true,
+    auth: { meetingToken },
+    withCredentials: false,
     autoConnect: true,
     reconnection: true,
     reconnectionDelay: 1000,
@@ -41,6 +44,7 @@ export function destroySocket() {
     activeSocket.removeAllListeners();
     activeSocket.disconnect();
     activeSocket = null;
+    activeMeetingToken = null;
   }
 }
 

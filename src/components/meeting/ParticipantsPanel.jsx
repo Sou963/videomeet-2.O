@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { MicOffIcon, VideoOffIcon, CrownIcon, SendIcon, SparklesIcon } from "./icons";
+import { MicOffIcon, VideoOffIcon, CrownIcon, SendIcon, SparklesIcon, XIcon } from "./icons";
 
 export default function ParticipantsPanel({
   localName,
   isHost,
+  isGuest,
   remoteParticipants,
   raisedHands,
   handRaised,
   onAnnounce,
+  onRemoveParticipant,
 }) {
   const [announcementText, setAnnouncementText] = useState("");
   const [announcementSent, setAnnouncementSent] = useState(false);
@@ -44,6 +46,9 @@ export default function ParticipantsPanel({
                   <CrownIcon className="w-2.5 h-2.5" /> Host
                 </span>
               )}
+              {isGuest && (
+                <span className="text-[10px] text-slate-400 font-normal">Guest</span>
+              )}
             </div>
           </div>
 
@@ -74,6 +79,14 @@ export default function ParticipantsPanel({
                 </div>
                 <div>
                   <p className="font-semibold text-slate-200">{p.name || "Participant"}</p>
+                  {p.role === "host" && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400">
+                      <CrownIcon className="h-2.5 w-2.5" /> Host
+                    </span>
+                  )}
+                  {p.role === "guest" && (
+                    <span className="text-[10px] text-slate-400">Guest</span>
+                  )}
                 </div>
               </div>
 
@@ -92,6 +105,17 @@ export default function ParticipantsPanel({
                   <span className="rounded-md bg-amber-500/20 px-1.5 py-0.5 text-amber-300 font-bold" title="Hand raised">
                     ✋
                   </span>
+                )}
+                {isHost && p.role !== "host" && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveParticipant(p.peerId)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-500/15 hover:text-red-300"
+                    title={`Remove ${p.name || "participant"}`}
+                    aria-label={`Remove ${p.name || "participant"}`}
+                  >
+                    <XIcon className="h-3.5 w-3.5" />
+                  </button>
                 )}
                 {p.stream ? (
                   <span className="h-2 w-2 rounded-full bg-[#22C55E]" title="Connected" />

@@ -8,7 +8,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22.16.0
-      - key: NEXT_PUBLIC_API_URL
-        value: https://videomeet-backend-uyms.onrender.com/api
+      - key: API_PROXY_URL
+        sync: false
       - key: NEXT_PUBLIC_SOCKET_URL
-        value: https://videomeet-backend-uyms.onrender.com
+        sync: false

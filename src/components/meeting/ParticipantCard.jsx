@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useAudioActivity from "@/hooks/useAudioActivity";
 import { MicOffIcon, CrownIcon } from "./icons";
 
@@ -16,34 +16,27 @@ export default function ParticipantCard({
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const [audioBlocked, setAudioBlocked] = useState(false);
+  const resumeRemoteAudio = useCallback(() => {
+    const playback = audioRef.current?.play();
+    if (playback) {
+      playback.then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true));
+    }
+  }, []);
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.srcObject = participant.stream || null;
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    audio.srcObject = participant.stream || null;
-    if (!participant.stream || muteOriginalAudio) {
-      return;
+    if (audioRef.current) {
+      audioRef.current.srcObject = participant.stream || null;
+      resumeRemoteAudio();
     }
 
-    audio.play().then(
-      () => setAudioBlocked(false),
-      (error) => {
-        if (error.name === "NotAllowedError") setAudioBlocked(true);
-        else console.warn("[WebRTC] Remote audio playback failed:", error.message);
-      }
-    );
-  }, [participant.stream, muteOriginalAudio]);
-
-  async function enableAudio() {
-    try {
-      await audioRef.current?.play();
-      setAudioBlocked(false);
-    } catch (error) {
-      console.warn("[WebRTC] Remote audio playback failed:", error.message);
-    }
-  }
+    document.addEventListener("pointerdown", resumeRemoteAudio);
+    document.addEventListener("touchend", resumeRemoteAudio);
+    return () => {
+      document.removeEventListener("pointerdown", resumeRemoteAudio);
+      document.removeEventListener("touchend", resumeRemoteAudio);
+    };
+  }, [participant.stream, resumeRemoteAudio]);
 
   const hasVideo = participant.video !== false && !!participant.stream;
   const hasAudio = participant.audio !== false;
@@ -83,10 +76,10 @@ export default function ParticipantCard({
       {audioBlocked && participant.stream && !muteOriginalAudio && (
         <button
           type="button"
-          onClick={enableAudio}
-          className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-[#38BDF8] px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg"
+          onClick={resumeRemoteAudio}
+          className="absolute inset-x-4 bottom-12 z-20 mx-auto w-fit rounded-lg bg-slate-950/90 px-3 py-2 text-xs font-semibold text-white"
         >
-          Enable audio
+          Tap to enable audio
         </button>
       )}
 

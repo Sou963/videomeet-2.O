@@ -9,12 +9,17 @@ import MeetingSidebar from "./MeetingSidebar";
 import MeetingControls from "./MeetingControls";
 import MeetingMoreMenu from "./MeetingMoreMenu";
 import MeetingToast from "./MeetingToast";
+import { api } from "@/lib/api";
 
 export default function MeetingRoom({
   meetingId,
   name,
   title,
   isHost,
+  isGuest = false,
+  accessToken,
+  timeLimit = 0,
+  maxParticipants = 0,
   initialCameraEnabled = true,
   initialMicEnabled = true,
   onLeave,
@@ -40,6 +45,7 @@ export default function MeetingRoom({
     connectionState,
     turnConfigured,
     error,
+    mediaWarnings,
     micEnabled,
     cameraEnabled,
     isScreenSharing,
@@ -54,11 +60,13 @@ export default function MeetingRoom({
     toggleRaiseHand,
     sendReaction,
     sendAnnouncement,
+    removeParticipant,
     setError,
     socketRef,
   } = useWebRTC({
     meetingId,
     name,
+    accessToken,
     onMeetingEnded: onLeave,
     initialCameraEnabled,
     initialMicEnabled,
@@ -90,6 +98,36 @@ export default function MeetingRoom({
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   }, [sessionSeconds]);
 
+  // ── Time Limit Countdown ────────────────────────────────────────
+  const timeLimitSeconds = timeLimit * 60;
+  const remainingSeconds = timeLimitSeconds > 0 ? Math.max(0, timeLimitSeconds - sessionSeconds) : null;
+  const warnedRef = useRef(false);
+
+  const remainingFormatted = useMemo(() => {
+    if (remainingSeconds === null) return null;
+    const mins = Math.floor(remainingSeconds / 60);
+    const secs = remainingSeconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }, [remainingSeconds]);
+
+  // Warning at 5 minutes remaining
+  useEffect(() => {
+    if (remainingSeconds === null) return;
+    if (remainingSeconds <= 300 && remainingSeconds > 0 && !warnedRef.current) {
+      warnedRef.current = true;
+      setToast({
+        message: `⏰ Warning: Meeting will auto-end in ${Math.ceil(remainingSeconds / 60)} minute${Math.ceil(remainingSeconds / 60) === 1 ? "" : "s"}!`,
+        type: "warning",
+        duration: 8000,
+      });
+    }
+    if (remainingSeconds <= 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Countdown transitions are exposed as derived state.
+      setToast({ message: "⏰ Meeting time limit reached. Ending meeting...", type: "warning" });
+      setTimeout(() => onLeave(), 2000);
+    }
+  }, [remainingSeconds, onLeave, setToast]);
+
   // ── Handle Incoming Reactions ────────────────────────────────────
   useEffect(() => {
     if (!reactions || reactions.length === 0) return;
@@ -97,6 +135,7 @@ export default function MeetingRoom({
     if (!latest) return;
 
     const targetKey = latest.peerId || "remote";
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- The WebRTC hook exposes reactions as event-driven state.
     setReactionsMap((prev) => ({ ...prev, [targetKey]: latest.reaction }));
 
     const timer = setTimeout(() => {
@@ -144,6 +183,15 @@ export default function MeetingRoom({
     });
   }, [meetingId]);
 
+  const handleEndMeeting = useCallback(async () => {
+    try {
+      await api(`/meetings/${meetingId}`, { method: "DELETE" });
+      onLeave();
+    } catch (requestError) {
+      setError(requestError.message || "Could not end the meeting.");
+    }
+  }, [meetingId, onLeave, setError]);
+
   // ── Sidebar Toggle Handler ───────────────────────────────────────
   const handleToggleSidebar = useCallback((tab) => {
     setSidebarTab((current) => (current === tab ? null : tab));
@@ -190,6 +238,7 @@ export default function MeetingRoom({
   // ── Announcement Toast ───────────────────────────────────────────
   useEffect(() => {
     if (announcement) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- The WebRTC hook exposes announcements as event-driven state.
       setToast({
         message: `📢 [${announcement.name}]: ${announcement.message}`,
         type: "info",
@@ -231,7 +280,10 @@ export default function MeetingRoom({
         title={title}
         connectionState={connectionState}
         durationText={durationFormatted}
+        remainingText={remainingFormatted}
+        remainingSeconds={remainingSeconds}
         participantCount={totalParticipants}
+        maxParticipants={maxParticipants}
         translationEnabled={translationEnabled}
         viewMode={viewMode}
         onToggleViewMode={setViewMode}
@@ -240,6 +292,15 @@ export default function MeetingRoom({
         activeSidebarTab={sidebarTab}
         onOpenMoreMenu={() => setIsMoreMenuOpen(true)}
       />
+
+      {(error || mediaWarnings.length > 0) && (
+        <div
+          role="status"
+          className="absolute left-1/2 top-20 z-30 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-xl border border-amber-500/30 bg-[#151D2E]/95 px-4 py-3 text-center text-xs text-amber-200 shadow-xl"
+        >
+          {error || mediaWarnings.join(" ")}
+        </div>
+      )}
 
       {/* ── Main Workspace: Video Stage + Collapsible Sidebar ─────── */}
       <div className="relative flex flex-1 overflow-hidden min-h-0">
@@ -274,6 +335,8 @@ export default function MeetingRoom({
           raisedHands={raisedHands}
           handRaised={handRaised}
           onAnnounce={sendAnnouncement}
+          onRemoveParticipant={removeParticipant}
+          isGuest={isGuest}
           meetingId={meetingId}
           socketRef={socketRef}
           translationEnabled={translationEnabled}
@@ -311,7 +374,7 @@ export default function MeetingRoom({
         title={title}
         isHost={isHost}
         onCopyLink={handleCopyLink}
-        onEndMeeting={onLeave}
+        onEndMeeting={handleEndMeeting}
         viewMode={viewMode}
         onToggleViewMode={setViewMode}
       />

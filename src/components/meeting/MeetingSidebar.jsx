@@ -12,10 +12,12 @@ export default function MeetingSidebar({
   onClose,
   localName,
   isHost,
+  isGuest,
   remoteParticipants,
   raisedHands,
   handRaised,
   onAnnounce,
+  onRemoveParticipant,
   meetingId,
   socketRef,
   translationEnabled,
@@ -95,6 +97,8 @@ export default function MeetingSidebar({
             raisedHands={raisedHands}
             handRaised={handRaised}
             onAnnounce={onAnnounce}
+            onRemoveParticipant={onRemoveParticipant}
+            isGuest={isGuest}
           />
         )}
 

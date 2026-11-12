@@ -20,6 +20,9 @@ import {
   Sparkles,
   Users,
   AlertCircle,
+  Trash2,
+  Power,
+  Timer,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import BrandLogo from "@/components/common/BrandLogo";
@@ -31,6 +34,8 @@ export default function Dashboard() {
   const [title, setTitle] = useState("");
   const [password, setPassword] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [timeLimit, setTimeLimit] = useState(0);
+  const [maxParticipants, setMaxParticipants] = useState(0);
   const [meetings, setMeetings] = useState([]);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState(null);
@@ -58,6 +63,8 @@ export default function Dashboard() {
           title: title.trim() || `${user?.name || "User"}'s Meeting`,
           password: password.trim() || undefined,
           scheduledAt: scheduledAt || undefined,
+          timeLimit: timeLimit || undefined,
+          maxParticipants: maxParticipants || undefined,
         }),
       });
 
@@ -89,6 +96,33 @@ export default function Dashboard() {
     navigator.clipboard.writeText(id);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  async function toggleMeetingStatus(meetingId, currentStatus) {
+    const newStatus = currentStatus === "active" || currentStatus === "live" ? "inactive" : "active";
+    try {
+      await api(`/meetings/${meetingId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      setMeetings((prev) =>
+        prev.map((m) =>
+          m.meetingId === meetingId ? { ...m, status: newStatus } : m
+        )
+      );
+    } catch (err) {
+      setError(err.message || "Failed to update meeting status.");
+    }
+  }
+
+  async function deleteMeeting(meetingId) {
+    if (!confirm("Are you sure you want to delete this meeting?")) return;
+    try {
+      await api(`/meetings/${meetingId}`, { method: "DELETE" });
+      setMeetings((prev) => prev.filter((m) => m.meetingId !== meetingId));
+    } catch (err) {
+      setError(err.message || "Failed to delete meeting.");
+    }
   }
 
   const userInitial = user?.name ? user.name[0].toUpperCase() : "U";
@@ -233,6 +267,54 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Time Limit
+                  </label>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                      <Timer className="h-4 w-4" />
+                    </div>
+                    <select
+                      value={timeLimit}
+                      onChange={(e) => setTimeLimit(Number(e.target.value))}
+                      className="h-12 w-full rounded-2xl border border-slate-300/80 bg-slate-50/50 pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 appearance-none"
+                    >
+                      <option value={0}>No Limit</option>
+                      <option value={15}>15 Minutes</option>
+                      <option value={30}>30 Minutes</option>
+                      <option value={45}>45 Minutes</option>
+                      <option value={60}>1 Hour</option>
+                      <option value={120}>2 Hours</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Max Participants
+                  </label>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                      <Users className="h-4 w-4" />
+                    </div>
+                    <select
+                      value={maxParticipants}
+                      onChange={(e) => setMaxParticipants(Number(e.target.value))}
+                      className="h-12 w-full rounded-2xl border border-slate-300/80 bg-slate-50/50 pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 appearance-none"
+                    >
+                      <option value={0}>No Limit</option>
+                      <option value={2}>2 People</option>
+                      <option value={5}>5 People</option>
+                      <option value={10}>10 People</option>
+                      <option value={25}>25 People</option>
+                      <option value={50}>50 People</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
@@ -366,11 +448,65 @@ export default function Dashboard() {
                               </span>
                             </>
                           )}
+                          {m.timeLimit > 0 && (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-1 text-indigo-600">
+                                <Timer className="h-3 w-3" />
+                                {m.timeLimit}min
+                              </span>
+                            </>
+                          )}
+                          {m.maxParticipants > 0 && (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-1 text-cyan-600">
+                                <Users className="h-3 w-3" />
+                                Max {m.maxParticipants}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleMeetingStatus(m.meetingId, m.status)}
+                        disabled={m.status === "ended"}
+                        className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                          m.status === "inactive"
+                            ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                            : "border-amber-200 text-amber-700 hover:bg-amber-50"
+                        } disabled:cursor-not-allowed disabled:opacity-50`}
+                        title={
+                          m.status === "ended"
+                            ? "Ended meetings cannot be reactivated"
+                            : m.status === "inactive"
+                              ? "Activate Meeting"
+                              : "Deactivate Meeting"
+                        }
+                      >
+                        <Power className="h-3.5 w-3.5" />
+                        <span>
+                          {m.status === "ended"
+                            ? "Ended"
+                            : m.status === "inactive"
+                              ? "Activate"
+                              : "Deactivate"}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => deleteMeeting(m.meetingId)}
+                        className="flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                        title="Delete Meeting"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => copyMeetingId(m.meetingId)}
@@ -391,8 +527,9 @@ export default function Dashboard() {
 
                       <button
                         type="button"
+                        disabled={m.status === "inactive" || m.status === "ended"}
                         onClick={() => router.push(`/meeting/${m.meetingId}`)}
-                        className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 active:scale-95"
+                        className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Video className="h-3.5 w-3.5" />
                         <span>Join</span>

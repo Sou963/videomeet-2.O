@@ -55,6 +55,7 @@ export default function ParticipantGrid({
         <div key={p.peerId} className="h-full max-h-[calc(100vh-170px)] aspect-video w-full">
           <ParticipantCard
             participant={p}
+            isHost={p.role === "host"}
             handRaised={raisedHands[p.peerId]}
             muteOriginalAudio={muteOriginalAudio}
             activeReaction={reactionsMap[p.peerId]}

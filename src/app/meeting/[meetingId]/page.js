@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import {
+  api,
+  clearMeetingAccessToken,
+  getMeetingAccessToken,
+  saveMeetingAccessToken,
+} from "@/lib/api";
 import MeetingRoom from "@/components/meeting/MeetingRoom";
 import BrandLogo from "@/components/common/BrandLogo";
 import {
@@ -18,13 +23,13 @@ import {
 export default function MeetingPage() {
   const { meetingId } = useParams();
   const router = useRouter();
-  const previewRef = useRef(null);
-  const streamRef = useRef(null);
-  const cameraRef = useRef(true);
-  const microphoneRef = useRef(true);
 
   const [meeting, setMeeting] = useState(null);
   const [user, setUser] = useState(null);
+  const [accessToken, setAccessToken] = useState(null);
+  const [isGuest, setIsGuest] = useState(false);
+  const [isHost, setIsHost] = useState(false);
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [camera, setCamera] = useState(true);
   const [microphone, setMicrophone] = useState(true);
@@ -33,66 +38,66 @@ export default function MeetingPage() {
   const [joining, setJoining] = useState(false);
 
   useEffect(() => {
-    Promise.all([api(`/meetings/${meetingId}`), api("/auth/me")])
-      .then(([meetingResponse, userResponse]) => {
-        setMeeting(meetingResponse.meeting);
-        setUser(userResponse.user);
-      })
-      .catch((requestError) => setError(requestError.message));
-  }, [meetingId]);
-
-  useEffect(() => {
-    if (!navigator.mediaDevices?.getUserMedia) return undefined;
-
     let active = true;
-    const requestMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
 
-    requestMedia({ video: true, audio: true })
-      .then((stream) => {
-        if (!active) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
+    async function loadMeeting() {
+      try {
+        const savedToken = getMeetingAccessToken(meetingId);
+        if (savedToken) {
+          try {
+            const { meeting: restoredMeeting, identity } = await api(
+              `/meetings/${meetingId}/session`
+            );
+            if (!active) return;
+            setMeeting(restoredMeeting);
+            setUser({ name: identity.name, id: identity.userId });
+            setIsGuest(identity.role === "guest");
+            setIsHost(identity.role === "host");
+            setAccessToken(savedToken);
+            setIsJoined(true);
+            return;
+          } catch (restoreError) {
+            if ([401, 403, 404].includes(restoreError.status)) {
+              clearMeetingAccessToken(meetingId);
+            } else {
+              if (active) setError(restoreError.message);
+              return;
+            }
+          }
         }
 
-        streamRef.current = stream;
-        stream.getVideoTracks().forEach((track) => {
-          track.enabled = cameraRef.current;
-        });
-        stream.getAudioTracks().forEach((track) => {
-          track.enabled = microphoneRef.current;
-        });
-
-        if (previewRef.current) {
-          previewRef.current.srcObject = stream;
-        }
-      })
-      .catch((deviceError) => {
+        const { meeting: meetingInfo } = await api(`/meetings/${meetingId}/info`);
         if (!active) return;
-        setError(
-          deviceError.name === "NotAllowedError"
-            ? "Allow camera and microphone access in your browser settings to continue."
-            : `Camera/microphone unavailable: ${deviceError.message}`
-        );
-      });
+        setMeeting(meetingInfo);
 
+        try {
+          const { user: authenticatedUser } = await api("/auth/me");
+          if (!active) return;
+          setUser(authenticatedUser);
+          setDisplayName(authenticatedUser.name || "");
+
+          try {
+            const { meeting: fullMeeting } = await api(`/meetings/${meetingId}`);
+            if (!active) return;
+            setMeeting({ ...meetingInfo, ...fullMeeting });
+            const hostId = fullMeeting.hostId?._id || fullMeeting.hostId;
+            setIsHost(String(hostId) === String(authenticatedUser.id));
+          } catch {
+            // A valid guest link remains usable when the current user is not a member.
+          }
+        } catch {
+          if (active) setUser(null);
+        }
+      } catch (requestError) {
+        if (active) setError(requestError.message);
+      }
+    }
+
+    loadMeeting();
     return () => {
       active = false;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
     };
-  }, []);
-
-  useEffect(() => {
-    streamRef.current?.getVideoTracks().forEach((track) => {
-      track.enabled = camera;
-    });
-  }, [camera]);
-
-  useEffect(() => {
-    streamRef.current?.getAudioTracks().forEach((track) => {
-      track.enabled = microphone;
-    });
-  }, [microphone]);
+  }, [meetingId]);
 
   async function join() {
     if (joining) return;
@@ -100,13 +105,29 @@ export default function MeetingPage() {
 
     try {
       setError("");
-      await api(`/meetings/${meetingId}/join`, {
-        method: "POST",
-        body: JSON.stringify({ password }),
-      });
+      let access;
+      if (user) {
+        await api(`/meetings/${meetingId}/join`, {
+          method: "POST",
+          body: JSON.stringify({ password }),
+        });
+        access = await api(`/meetings/${meetingId}/access-token`, {
+          method: "POST",
+        });
+      } else {
+        access = await api(`/meetings/${meetingId}/guest-token`, {
+          method: "POST",
+          body: JSON.stringify({ name: displayName, password }),
+        });
+      }
 
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+      saveMeetingAccessToken(meetingId, access.token);
+      if (access.role === "guest") {
+        setUser({ name: access.name, id: null });
+        setIsGuest(true);
+      }
+      setAccessToken(access.token);
+      setIsHost(access.role === "host");
       setIsJoined(true);
     } catch (joinError) {
       setError(joinError.message);
@@ -115,14 +136,6 @@ export default function MeetingPage() {
     }
   }
 
-  const isHost =
-    user &&
-    meeting &&
-    (meeting.hostId === user.id ||
-      meeting.hostId?._id === user.id ||
-      (typeof meeting.hostId === "object" &&
-        meeting.hostId?._id?.toString() === user.id?.toString()));
-
   if (isJoined) {
     return (
       <MeetingRoom
@@ -130,9 +143,16 @@ export default function MeetingPage() {
         name={user?.name}
         title={meeting?.title}
         isHost={isHost}
+        timeLimit={meeting?.timeLimit || 0}
+        maxParticipants={meeting?.maxParticipants || 0}
+        accessToken={accessToken}
+        isGuest={isGuest}
         initialCameraEnabled={camera}
         initialMicEnabled={microphone}
-        onLeave={() => router.push("/dashboard")}
+        onLeave={() => {
+          clearMeetingAccessToken(meetingId);
+          router.push(user?.id ? "/dashboard" : "/");
+        }}
       />
     );
   }
@@ -148,7 +168,7 @@ export default function MeetingPage() {
         <BrandLogo href="/" size="sm" theme="dark" showBadge={false} />
 
         <Link
-          href="/dashboard"
+          href={user ? "/dashboard" : "/"}
           className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-[#101624] px-3.5 py-2 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
         >
           <span>← Dashboard</span>
@@ -160,8 +180,16 @@ export default function MeetingPage() {
         {/* Top Header inside card */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-800/80 pb-6 gap-3">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-[#38BDF8]">
-              <span>Ready to Join</span>
+            <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
+              meeting?.status === "inactive" || meeting?.status === "ended"
+                ? "border-red-500/30 bg-red-500/10 text-red-300"
+                : "border-indigo-500/30 bg-indigo-500/10 text-[#38BDF8]"
+            }`}>
+              <span>
+                {meeting?.status === "inactive" || meeting?.status === "ended"
+                  ? "Meeting Unavailable"
+                  : "Ready to Join"}
+              </span>
             </div>
             <h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-white">
               {meeting?.title || "Connecting to meeting..."}
@@ -172,10 +200,11 @@ export default function MeetingPage() {
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
-            <span className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              Room Active
-            </span>
+            {meeting?.status === "inactive" || meeting?.status === "ended" ? (
+              <span className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300">
+                {meeting.status === "ended" ? "Meeting Ended" : "Meeting Deactivated"}
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -184,22 +213,14 @@ export default function MeetingPage() {
           {/* Camera preview tile (7 cols) */}
           <div className="lg:col-span-7">
             <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-slate-800 bg-[#080B14] shadow-xl">
-              <video
-                ref={previewRef}
-                autoPlay
-                muted
-                playsInline
-                className={`h-full w-full object-cover scale-x-[-1] ${camera ? "" : "hidden"}`}
-              />
-
-              {!camera && (
-                <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-b from-[#151D2E] to-[#101624]">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-tr from-[#6366F1] to-[#38BDF8] text-3xl font-bold text-white shadow-lg shadow-[#6366F1]/20">
-                    {user?.name ? user.name[0].toUpperCase() : "U"}
-                  </div>
-                  <p className="mt-3 text-xs text-slate-400">Camera is turned off</p>
+              <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-b from-[#151D2E] to-[#101624]">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-tr from-[#6366F1] to-[#38BDF8] text-3xl font-bold text-white shadow-lg shadow-[#6366F1]/20">
+                  {(user?.name || displayName || "U")[0].toUpperCase()}
                 </div>
-              )}
+                <p className="mt-3 text-xs text-slate-400">
+                  {camera ? "Camera will be requested after you join" : "Camera is off"}
+                </p>
+              </div>
 
               {/* Participant Pill overlay */}
               <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-xl bg-black/70 px-3 py-1.5 text-xs font-semibold backdrop-blur-md border border-slate-800">
@@ -212,11 +233,7 @@ export default function MeetingPage() {
             <div className="mt-4 flex items-center justify-center gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  const next = !microphone;
-                  microphoneRef.current = next;
-                  setMicrophone(next);
-                }}
+                onClick={() => setMicrophone((enabled) => !enabled)}
                 className={`flex items-center gap-2 rounded-2xl px-5 py-3 text-xs font-semibold transition active:scale-95 ${
                   microphone
                     ? "border border-slate-700 bg-slate-800/80 text-white hover:bg-slate-700"
@@ -229,11 +246,7 @@ export default function MeetingPage() {
 
               <button
                 type="button"
-                onClick={() => {
-                  const next = !camera;
-                  cameraRef.current = next;
-                  setCamera(next);
-                }}
+                onClick={() => setCamera((enabled) => !enabled)}
                 className={`flex items-center gap-2 rounded-2xl px-5 py-3 text-xs font-semibold transition active:scale-95 ${
                   camera
                     ? "border border-slate-700 bg-slate-800/80 text-white hover:bg-slate-700"
@@ -251,8 +264,24 @@ export default function MeetingPage() {
             <div>
               <h2 className="text-base font-bold text-white">Join Settings</h2>
               <p className="mt-1 text-xs text-slate-400 leading-relaxed">
-                Connect directly with peer-to-peer encrypted WebRTC. Test your devices above before entering.
+                Connect directly with peer-to-peer encrypted WebRTC. Camera and microphone are optional and will not be requested until after you join.
               </p>
+
+              {!user && (
+                <div className="mt-5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                    Your Display Name
+                  </label>
+                  <input
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    maxLength={60}
+                    autoComplete="name"
+                    placeholder="Enter your name"
+                    className="h-12 w-full rounded-2xl border border-slate-700 bg-[#151D2E] px-4 text-sm font-medium text-white placeholder-slate-500 outline-none transition focus:border-[#6366F1]"
+                  />
+                </div>
+              )}
 
               {meeting?.hasPassword && (
                 <div className="mt-5">
@@ -282,11 +311,17 @@ export default function MeetingPage() {
             <div className="space-y-3">
               <button
                 type="button"
-                disabled={!meeting || !user || joining}
+                disabled={
+                  !meeting ||
+                  joining ||
+                  (!user && displayName.trim().length < 2) ||
+                  meeting.status === "inactive" ||
+                  meeting.status === "ended"
+                }
                 onClick={join}
                 className="flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[#6366F1] font-bold text-white shadow-xl shadow-[#6366F1]/25 transition hover:bg-indigo-600 active:scale-[0.98] disabled:opacity-50"
               >
-                <span>{joining ? "Entering room…" : "Join Meeting Now"}</span>
+                <span>{joining ? "Entering room…" : "Join Meeting"}</span>
               </button>
 
               <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">

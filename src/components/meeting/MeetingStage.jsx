@@ -129,6 +129,7 @@ export default function MeetingStage({
               /* Active Speaker Participant Card */
               <ParticipantCard
                 participant={activeFocus}
+                isHost={activeFocus.role === "host"}
                 handRaised={raisedHands[activeFocus.peerId]}
                 muteOriginalAudio={translationEnabled}
                 activeReaction={reactionsMap[activeFocus.peerId]}
@@ -172,6 +173,7 @@ export default function MeetingStage({
                 <div key={p.peerId} className="h-full aspect-video shrink-0">
                   <ParticipantCard
                     participant={p}
+                    isHost={p.role === "host"}
                     handRaised={raisedHands[p.peerId]}
                     muteOriginalAudio={translationEnabled}
                     activeReaction={reactionsMap[p.peerId]}

@@ -50,6 +50,7 @@ The authenticated Express endpoint `POST /api/gemini/live-token` checks meeting 
 
    ```env
    NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   API_PROXY_URL=http://localhost:5000/api
    NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
    ```
 
@@ -73,6 +74,12 @@ STUN can establish direct calls on many networks, but it cannot relay media when
 5. Redeploy the backend and check `/api/health`. It must report `"turnConfigured": true`. The authenticated `/api/webrtc/ice-servers` response should include a TURN entry. It does not expose a coturn shared secret.
 
 The backend's `server/.env.example` lists the supported variables. In Render, configure these in the backend service's environment settings (not the frontend service). TURN is required for reliable calls on restrictive networks; do not claim cross-network support until a relay candidate and media flow are verified.
+
+   The frontend proxies `/api` through Next.js so the authentication cookie stays first-party in mobile browsers. Set `API_PROXY_URL` to the backend's full API URL (including `/api`), and `NEXT_PUBLIC_SOCKET_URL` to the backend origin. The Render blueprint leaves these deployment-specific URLs for configuration rather than hard-coding a stale service hostname.
+
+## Join as a guest
+
+Anyone with an active meeting link can enter a display name and join without an account. Meeting passwords still apply. Guest access is limited to that meeting and expires after two hours. Camera and microphone are optional and can be enabled from the meeting controls; a missing or denied device does not prevent joining.
 
 ## Deploy frontend and backend on Render
 

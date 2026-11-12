@@ -14,9 +14,14 @@ import { api } from "./api";
  * Fetch ICE server config from the backend.
  * TURN credentials are fetched per call so short-lived credentials can rotate.
  */
-export async function getIceServers() {
+export async function getIceServers(meetingId) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
   try {
-    const data = await api("/webrtc/ice-servers");
+    const data = await api(
+      `/webrtc/ice-servers?meetingId=${encodeURIComponent(meetingId)}`,
+      { signal: controller.signal }
+    );
     if (!Array.isArray(data.iceServers) || data.iceServers.length === 0) {
       throw new Error("Backend returned no ICE servers");
     }
@@ -33,6 +38,8 @@ export async function getIceServers() {
       ],
       turnConfigured: false,
     };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -78,11 +85,15 @@ export function createPeer({
   let restartAttempts = 0;
   let lastRestartRequestAt = 0;
 
-  // Add local tracks
-  if (localStream) {
-    localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+  const localTracks = localStream?.getTracks() || [];
+  for (const kind of ["audio", "video"]) {
+    const track = localTracks.find((candidate) => candidate.kind === kind);
+    if (track) {
+      pc.addTrack(track, localStream);
+    } else {
+      pc.addTransceiver(kind, { direction: "recvonly" });
+    }
   }
-
   // ── Handle incoming remote track ─────────────────────────────────
   pc.ontrack = ({ track }) => {
     const previousTrack = remoteStream
@@ -284,6 +295,21 @@ export function createPeer({
     }
   };
 
+  async function createOffer(iceRestart = false) {
+    if (pc.signalingState !== "stable") return;
+    try {
+      const offer = await pc.createOffer({ iceRestart });
+      await pc.setLocalDescription(offer);
+      socket.emit("webrtc-signal", {
+        meetingId,
+        targetId: peerId,
+        signal: pc.localDescription,
+      });
+    } catch (err) {
+      console.warn("[WebRTC] Offer creation error:", err.message);
+    }
+  }
+
   // ── Signal handler ───────────────────────────────────────────────
   async function processSignal(signal) {
     try {
@@ -342,17 +368,7 @@ export function createPeer({
   // ── Deterministic negotiation: lower socket ID creates offer ─────
   async function maybeCreateOffer() {
     if (myId < peerId) {
-      try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.emit("webrtc-signal", {
-          meetingId,
-          targetId: peerId,
-          signal: offer,
-        });
-      } catch (err) {
-        console.warn("[WebRTC] Offer creation error:", err.message);
-      }
+      await createOffer();
     }
     // If myId > peerId, we wait for the other peer to send us an offer.
   }
@@ -367,7 +383,28 @@ export function createPeer({
     }
   }
 
-  return { pc, close, handleSignal, maybeCreateOffer };
+  async function addLocalTrack(track) {
+    const transceiver = pc
+      .getTransceivers()
+      .find((candidate) => candidate.receiver.track.kind === track.kind);
+    if (!transceiver) {
+      pc.addTrack(track);
+    } else {
+      await transceiver.sender.replaceTrack(track);
+      transceiver.direction = "sendrecv";
+    }
+    if (myId < peerId) {
+      await createOffer();
+    } else {
+      socket.emit("webrtc-signal", {
+        meetingId,
+        targetId: peerId,
+        signal: { type: "ice-restart-request" },
+      });
+    }
+  }
+
+  return { pc, close, handleSignal, maybeCreateOffer, addLocalTrack };
 }
 
 /**
@@ -376,9 +413,12 @@ export function createPeer({
  */
 export function replaceVideoTrack(peersMap, newTrack) {
   for (const entry of Object.values(peersMap)) {
-    const sender = entry.pc
-      .getSenders()
-      .find((s) => s.track?.kind === "video");
+    const transceiver = entry.pc
+      .getTransceivers()
+      .find((item) => item.receiver.track.kind === "video");
+    const sender = transceiver?.sender ||
+      entry.pc.getSenders().find((item) => item.track?.kind === "video");
     if (sender) sender.replaceTrack(newTrack).catch(() => {});
+    if (transceiver && newTrack) transceiver.direction = "sendrecv";
   }
 }
