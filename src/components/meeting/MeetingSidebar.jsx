@@ -2,8 +2,9 @@
 
 import ParticipantsPanel from "./ParticipantsPanel";
 import ChatPanel from "./ChatPanel";
+import FileSharingPanel from "./FileSharingPanel";
 import TranslationPanel from "./TranslationPanel";
-import { UsersIcon, ChatIcon, LanguagesIcon, XIcon } from "./icons";
+import { UsersIcon, ChatIcon, FileIcon, LanguagesIcon, XIcon } from "./icons";
 
 export default function MeetingSidebar({
   isOpen,
@@ -26,6 +27,8 @@ export default function MeetingSidebar({
   onChangeLanguage,
   translationStatus,
   translationError,
+  fileSharing,
+  meetingEnded,
 }) {
   if (!isOpen) return null;
 
@@ -36,7 +39,7 @@ export default function MeetingSidebar({
       {/* ── Sidebar Header & Tab Switcher ────────────────────────── */}
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-800/80 px-4">
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 rounded-xl bg-[#101624] p-1">
+        <div className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-xl bg-[#101624] p-1">
           <button
             onClick={() => onTabChange("people")}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
@@ -62,8 +65,20 @@ export default function MeetingSidebar({
           </button>
 
           <button
+            onClick={() => onTabChange("files")}
+            className={`flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
+              activeTab === "files"
+                ? "bg-[#1A2437] text-white shadow-xs"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <FileIcon className="h-3.5 w-3.5" />
+            <span>Files</span>
+          </button>
+
+          <button
             onClick={() => onTabChange("translation")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            className={`flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
               activeTab === "translation"
                 ? "bg-[#1A2437] text-white shadow-xs"
                 : "text-slate-400 hover:text-slate-200"
@@ -99,6 +114,7 @@ export default function MeetingSidebar({
             onAnnounce={onAnnounce}
             onRemoveParticipant={onRemoveParticipant}
             isGuest={isGuest}
+            meetingEnded={meetingEnded}
           />
         )}
 
@@ -107,6 +123,16 @@ export default function MeetingSidebar({
             meetingId={meetingId}
             name={localName}
             socketRef={socketRef}
+            disabled={meetingEnded}
+          />
+        )}
+
+        {activeTab === "files" && (
+          <FileSharingPanel
+            localName={localName}
+            remoteParticipants={remoteParticipants}
+            {...fileSharing}
+            disabled={meetingEnded}
           />
         )}
 
@@ -118,6 +144,7 @@ export default function MeetingSidebar({
             setLanguage={onChangeLanguage}
             status={translationStatus}
             error={translationError}
+            disabled={meetingEnded}
           />
         )}
       </div>

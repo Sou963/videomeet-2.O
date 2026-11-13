@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import useWebRTC from "@/hooks/useWebRTC";
+import useMeetingFiles from "@/hooks/useMeetingFiles";
 import useVoiceTranslation from "@/hooks/useVoiceTranslation";
 import MeetingHeader from "./MeetingHeader";
 import MeetingStage from "./MeetingStage";
@@ -22,6 +23,11 @@ export default function MeetingRoom({
   maxParticipants = 0,
   initialCameraEnabled = true,
   initialMicEnabled = true,
+  meetingStatus = "active",
+  hostEndedAt = null,
+  deactivateAt = null,
+  deactivatedAt = null,
+  serverNow = null,
   onLeave,
 }) {
   // ── Layout & View State ──────────────────────────────────────────
@@ -30,10 +36,75 @@ export default function MeetingRoom({
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [sessionSeconds, setSessionSeconds] = useState(0);
+  const [endingRequest, setEndingRequest] = useState(false);
+  const [meetingLifecycle, setMeetingLifecycle] = useState(() => ({
+    status: meetingStatus,
+    hostEndedAt,
+    deactivateAt,
+    deactivatedAt,
+    serverNow,
+  }));
+  const [authoritativeNowMs, setAuthoritativeNowMs] = useState(null);
+  const lifecycleClockRef = useRef({ serverNowMs: null, receivedAt: 0 });
+  const deactivationRedirectRef = useRef(false);
+  const onLeaveRef = useRef(onLeave);
+  const timeLimitLeaveTimerRef = useRef(null);
 
   // ── Translation State ────────────────────────────────────────────
   const [translationEnabled, setTranslationEnabled] = useState(false);
   const [listenLanguage, setListenLanguage] = useState("en");
+
+  const syncMeetingLifecycle = useCallback((details) => {
+    if (!details) return;
+    setMeetingLifecycle((current) => ({
+      ...current,
+      ...details,
+      status: details.status || current.status,
+    }));
+    const serverNowMs = Date.parse(details.serverNow);
+    if (Number.isFinite(serverNowMs)) {
+      lifecycleClockRef.current = {
+        serverNowMs,
+        receivedAt: performance.now(),
+      };
+      setAuthoritativeNowMs(serverNowMs);
+    }
+  }, []);
+
+  useEffect(() => {
+    onLeaveRef.current = onLeave;
+  }, [onLeave]);
+
+  const handleMeetingEnding = useCallback((details) => {
+    syncMeetingLifecycle({ ...details, status: "ending" });
+    setTranslationEnabled(false);
+    setToast({
+      message: "The host has ended this meeting. This room will be deactivated in 5 minutes.",
+      type: "warning",
+      duration: 8000,
+    });
+  }, [syncMeetingLifecycle]);
+
+  const handleMeetingDeactivated = useCallback((details) => {
+    syncMeetingLifecycle({ ...details, status: "deactivated" });
+    setTranslationEnabled(false);
+    setToast({
+      message: "This meeting has been deactivated.",
+      type: "info",
+      duration: 3000,
+    });
+    if (!deactivationRedirectRef.current) {
+      deactivationRedirectRef.current = true;
+      window.setTimeout(() => onLeaveRef.current?.("deactivated"), 2500);
+    }
+  }, [syncMeetingLifecycle]);
+
+  const onFileNotification = useCallback(({ message, type }) => {
+    setToast({ message, type });
+  }, []);
+  const fileSharing = useMeetingFiles({ meetingId, name, onNotify: onFileNotification });
+  const { setPeerConnections } = fileSharing;
+  const meetingCanStartActivities = ["active", "scheduled"].includes(meetingLifecycle.status);
 
   // ── Reactions Map (peerId -> emoji) ──────────────────────────────
   const [reactionsMap, setReactionsMap] = useState({});
@@ -63,14 +134,23 @@ export default function MeetingRoom({
     removeParticipant,
     setError,
     socketRef,
+    peerConnectionsRef,
   } = useWebRTC({
     meetingId,
     name,
     accessToken,
-    onMeetingEnded: onLeave,
+    onDataChannel: fileSharing.handleDataChannel,
+    onSocketReady: fileSharing.handleSocket,
+    onMeetingEnding: handleMeetingEnding,
+    onMeetingDeactivated: handleMeetingDeactivated,
+    canStartMedia: meetingCanStartActivities,
     initialCameraEnabled,
     initialMicEnabled,
   });
+
+  useEffect(() => {
+    setPeerConnections(peerConnectionsRef);
+  }, [peerConnectionsRef, setPeerConnections]);
 
   // ── Voice Translation Hook ───────────────────────────────────────
   const translation = useVoiceTranslation({
@@ -79,6 +159,63 @@ export default function MeetingRoom({
     enabled: translationEnabled,
     language: listenLanguage,
   });
+
+  const refreshMeetingLifecycle = useCallback(async () => {
+    try {
+      const current = await api(`/meetings/${meetingId}/status`);
+      syncMeetingLifecycle(current);
+      if (current.status === "ending") setTranslationEnabled(false);
+      if (current.status === "deactivated") handleMeetingDeactivated(current);
+    } catch (requestError) {
+      if (![401, 403, 404].includes(requestError.status)) {
+        setError(requestError.message || "Meeting status could not be refreshed.");
+      }
+    }
+  }, [handleMeetingDeactivated, meetingId, setError, syncMeetingLifecycle]);
+
+  useEffect(() => {
+    const firstCheck = window.setTimeout(() => {
+      void refreshMeetingLifecycle();
+    }, 0);
+    const interval = window.setInterval(
+      refreshMeetingLifecycle,
+      meetingLifecycle.status === "ending" ? 1500 : 15000
+    );
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshMeetingLifecycle();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearTimeout(firstCheck);
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [meetingId, meetingLifecycle.status, refreshMeetingLifecycle]);
+
+  useEffect(() => {
+    if (meetingLifecycle.status !== "ending") return;
+    const interval = window.setInterval(() => {
+      const { serverNowMs, receivedAt } = lifecycleClockRef.current;
+      if (Number.isFinite(serverNowMs)) {
+        setAuthoritativeNowMs(serverNowMs + (performance.now() - receivedAt));
+      }
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [meetingLifecycle.status]);
+
+  const deactivationRemaining = useMemo(() => {
+    if (meetingLifecycle.status !== "ending" || !meetingLifecycle.deactivateAt) return null;
+    const deadline = Date.parse(meetingLifecycle.deactivateAt);
+    if (!Number.isFinite(deadline) || !Number.isFinite(authoritativeNowMs)) return null;
+    return Math.max(0, Math.ceil((deadline - authoritativeNowMs) / 1000));
+  }, [authoritativeNowMs, meetingLifecycle]);
+
+  const deactivationCountdown = useMemo(() => {
+    if (deactivationRemaining === null) return "--:--";
+    const minutes = Math.floor(deactivationRemaining / 60);
+    const seconds = deactivationRemaining % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }, [deactivationRemaining]);
 
   // ── Elapsed Duration Timer ───────────────────────────────────────
   useEffect(() => {
@@ -103,6 +240,15 @@ export default function MeetingRoom({
   const remainingSeconds = timeLimitSeconds > 0 ? Math.max(0, timeLimitSeconds - sessionSeconds) : null;
   const warnedRef = useRef(false);
 
+  useEffect(
+    () => () => {
+      if (timeLimitLeaveTimerRef.current) {
+        window.clearTimeout(timeLimitLeaveTimerRef.current);
+      }
+    },
+    []
+  );
+
   const remainingFormatted = useMemo(() => {
     if (remainingSeconds === null) return null;
     const mins = Math.floor(remainingSeconds / 60);
@@ -113,6 +259,13 @@ export default function MeetingRoom({
   // Warning at 5 minutes remaining
   useEffect(() => {
     if (remainingSeconds === null) return;
+    if (["ending", "deactivated"].includes(meetingLifecycle.status)) {
+      if (timeLimitLeaveTimerRef.current) {
+        window.clearTimeout(timeLimitLeaveTimerRef.current);
+        timeLimitLeaveTimerRef.current = null;
+      }
+      return;
+    }
     if (remainingSeconds <= 300 && remainingSeconds > 0 && !warnedRef.current) {
       warnedRef.current = true;
       setToast({
@@ -124,9 +277,14 @@ export default function MeetingRoom({
     if (remainingSeconds <= 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Countdown transitions are exposed as derived state.
       setToast({ message: "⏰ Meeting time limit reached. Ending meeting...", type: "warning" });
-      setTimeout(() => onLeave(), 2000);
+      if (!timeLimitLeaveTimerRef.current) {
+        timeLimitLeaveTimerRef.current = window.setTimeout(() => {
+          timeLimitLeaveTimerRef.current = null;
+          onLeaveRef.current?.();
+        }, 2000);
+      }
     }
-  }, [remainingSeconds, onLeave, setToast]);
+  }, [meetingLifecycle.status, remainingSeconds, setToast]);
 
   // ── Handle Incoming Reactions ────────────────────────────────────
   useEffect(() => {
@@ -184,13 +342,25 @@ export default function MeetingRoom({
   }, [meetingId]);
 
   const handleEndMeeting = useCallback(async () => {
+    if (endingRequest || !meetingCanStartActivities) return;
+    setEndingRequest(true);
     try {
-      await api(`/meetings/${meetingId}`, { method: "DELETE" });
-      onLeave();
+      const lifecycle = await api(`/meetings/${meetingId}/end`, { method: "POST" });
+      syncMeetingLifecycle(lifecycle);
+      setTranslationEnabled(false);
+      setToast({
+        message: "The host has ended this meeting. This room will be deactivated in 5 minutes.",
+        type: "warning",
+        duration: 8000,
+      });
     } catch (requestError) {
       setError(requestError.message || "Could not end the meeting.");
+    } finally {
+      setEndingRequest(false);
     }
-  }, [meetingId, onLeave, setError]);
+  }, [endingRequest, meetingCanStartActivities, meetingId, setError, syncMeetingLifecycle]);
+
+  const meetingEnded = ["ending", "deactivated"].includes(meetingLifecycle.status);
 
   // ── Sidebar Toggle Handler ───────────────────────────────────────
   const handleToggleSidebar = useCallback((tab) => {
@@ -345,6 +515,8 @@ export default function MeetingRoom({
           onChangeLanguage={setListenLanguage}
           translationStatus={translationStatus}
           translationError={translation.error}
+          fileSharing={fileSharing}
+          meetingEnded={meetingEnded}
         />
       </div>
 
@@ -364,6 +536,7 @@ export default function MeetingRoom({
         translationEnabled={translationEnabled}
         onOpenMoreMenu={() => setIsMoreMenuOpen((prev) => !prev)}
         onLeave={onLeave}
+        meetingEnded={meetingEnded}
       />
 
       {/* ── More Options Dropdown Menu ────────────────────────────── */}
@@ -377,7 +550,39 @@ export default function MeetingRoom({
         onEndMeeting={handleEndMeeting}
         viewMode={viewMode}
         onToggleViewMode={setViewMode}
+        meetingEnded={meetingEnded}
+        endingRequest={endingRequest}
       />
+
+      {meetingEnded && (
+        <div className="absolute inset-0 z-[70] flex items-center justify-center bg-[#080B14]/95 p-6 text-center backdrop-blur-md">
+          <section className="w-full max-w-md rounded-3xl border border-slate-700/80 bg-[#151D2E] p-8 shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 text-amber-300">
+              <span className="text-xl" aria-hidden="true">⏱</span>
+            </div>
+            <h2 className="mt-4 text-xl font-bold text-white">
+              {meetingLifecycle.status === "deactivated" ? "Meeting deactivated" : "Meeting ended"}
+            </h2>
+            {meetingLifecycle.status === "ending" ? (
+              <>
+                <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                  The host has ended this meeting. This room will be deactivated in 5 minutes.
+                </p>
+                <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  Room deactivation in
+                </p>
+                <p className="mt-1 font-mono text-5xl font-bold tracking-wider text-[#38BDF8]" aria-live="polite">
+                  {deactivationCountdown}
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                This meeting has been deactivated. Returning to the home page…
+              </p>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 }

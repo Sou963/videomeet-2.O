@@ -6,6 +6,8 @@ VideoMeet is a full-stack video conferencing application with native WebRTC call
 
 - User authentication and meeting management.
 - Peer-to-peer video, audio, and screen sharing.
+- Peer-to-peer file sharing over reliable WebRTC DataChannels, with per-recipient progress and cancellation.
+- Host-controlled meeting ending with a backend-enforced five-minute deactivation grace period.
 - Socket.IO chat, reactions, hand raising, and host announcements.
 - Optional Bengali ↔ English, audio-only translation through Gemini Live API.
 - Each participant chooses their own listening language; speech source language is detected by Gemini.
@@ -14,7 +16,15 @@ VideoMeet is a full-stack video conferencing application with native WebRTC call
 
 The browser captures only incoming remote WebRTC audio, resamples it to 16-bit mono PCM at 16 kHz, and streams it directly to the Gemini Live API. Generated 24 kHz PCM audio is played in the same browser. Audio is never sent through Express or Socket.IO, and local microphone tracks are not used as translation input.
 
-The authenticated Express endpoint `POST /api/gemini/live-token` checks meeting membership and returns a one-use, short-lived Gemini token. The permanent API key remains in `server/.env`. Client translation configuration is intentionally unlocked in the token constraints so each participant can choose a target language; response modality remains audio-only.
+The authenticated Express endpoint `POST /api/gemini/live-token` checks meeting membership and returns a one-use, short-lived Gemini token. The permanent API key remains in the backend repository's `.env`. Client translation configuration is intentionally unlocked in the token constraints so each participant can choose a target language; response modality remains audio-only.
+
+## File sharing and meeting lifecycle
+
+The Files sidebar sends files directly between participants over reliable `file-transfer` WebRTC DataChannels in 32 KiB chunks. Socket.IO authorizes transfers and carries metadata only; file bytes are never sent through Socket.IO. The default maximum is 25 MB per file. Configure `MEETING_MAX_FILE_SIZE_MB` in the backend environment and `NEXT_PUBLIC_MEETING_MAX_FILE_SIZE_MB` in the frontend build environment to the same positive integer if a different limit is needed.
+
+Each browser stores only metadata in `localStorage` under `videomeet_file_sharing_<meetingId>`; the file contents are not persisted. Received downloads remain available only in the current page session, so a refresh or closing the meeting page clears the local download Blob while retaining the metadata history.
+
+The host ends a meeting through `POST /api/meetings/:meetingId/end`. The backend stores `hostEndedAt` and a fixed `deactivateAt` deadline, broadcasts `meeting-ending`, and rejects new joins and meeting activities. A database-backed periodic sweep deactivates overdue meetings after backend restarts, broadcasts `meeting-deactivated`, and disconnects remaining room members. `GET /api/meetings/:meetingId/status` restores the authoritative status and deadline for participants who refresh during the grace period.
 
 ## Requirements
 
@@ -24,7 +34,7 @@ The authenticated Express endpoint `POST /api/gemini/live-token` checks meeting 
 
 ## Setup and startup
 
-1. Configure the backend environment in `server/.env`:
+1. Configure the backend environment in the backend repository's `.env`:
 
    ```env
    PORT=5000
@@ -36,12 +46,12 @@ The authenticated Express endpoint `POST /api/gemini/live-token` checks meeting 
    TURN_USERNAME=
    TURN_CREDENTIAL=
    TURN_SHARED_SECRET=
+   MEETING_MAX_FILE_SIZE_MB=25
    ```
 
-2. Start the backend:
+2. From the backend repository root, start the backend:
 
    ```powershell
-   cd server
    npm install
    npm run dev
    ```
@@ -52,9 +62,10 @@ The authenticated Express endpoint `POST /api/gemini/live-token` checks meeting 
    NEXT_PUBLIC_API_URL=http://localhost:5000/api
    API_PROXY_URL=http://localhost:5000/api
    NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
+   NEXT_PUBLIC_MEETING_MAX_FILE_SIZE_MB=25
    ```
 
-4. Start the frontend from the repository root:
+4. From the frontend repository root, start the frontend:
 
    ```powershell
    npm install
@@ -73,7 +84,7 @@ STUN can establish direct calls on many networks, but it cannot relay media when
 4. For a provider that issues short-lived credentials directly, set its temporary `TURN_USERNAME` and `TURN_CREDENTIAL` on the backend. Do not use a permanent provider API key as `TURN_CREDENTIAL`; provider API keys must remain server-side.
 5. Redeploy the backend and check `/api/health`. It must report `"turnConfigured": true`. The authenticated `/api/webrtc/ice-servers` response should include a TURN entry. It does not expose a coturn shared secret.
 
-The backend's `server/.env.example` lists the supported variables. In Render, configure these in the backend service's environment settings (not the frontend service). TURN is required for reliable calls on restrictive networks; do not claim cross-network support until a relay candidate and media flow are verified.
+The backend repository's `.env.example` lists the supported variables. In Render, configure these in the backend service's environment settings (not the frontend service). TURN is required for reliable calls on restrictive networks; do not claim cross-network support until a relay candidate and media flow are verified.
 
    The frontend proxies `/api` through Next.js so the authentication cookie stays first-party in mobile browsers. Set `API_PROXY_URL` to the backend's full API URL (including `/api`), and `NEXT_PUBLIC_SOCKET_URL` to the backend origin. The Render blueprint leaves these deployment-specific URLs for configuration rather than hard-coding a stale service hostname.
 

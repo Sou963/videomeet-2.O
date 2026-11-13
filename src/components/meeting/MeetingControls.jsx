@@ -32,6 +32,7 @@ export default function MeetingControls({
   translationEnabled,
   onOpenMoreMenu,
   onLeave,
+  meetingEnded = false,
 }) {
   const [showReactions, setShowReactions] = useState(false);
 
@@ -40,7 +41,7 @@ export default function MeetingControls({
       <div className="mx-auto flex max-w-fit items-center justify-center gap-2 sm:gap-2.5 rounded-full border border-slate-800/80 bg-[#101624]/90 p-2 sm:p-2.5 shadow-2xl backdrop-blur-2xl pointer-events-auto">
         {/* Reactions popover */}
         <ReactionsPanel
-          isOpen={showReactions}
+          isOpen={showReactions && !meetingEnded}
           onClose={() => setShowReactions(false)}
           onSelectReaction={onSendReaction}
         />
@@ -48,7 +49,8 @@ export default function MeetingControls({
         {/* 1. Microphone Toggle */}
         <button
           onClick={onToggleMic}
-          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 ${
+          disabled={meetingEnded}
+          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
             micEnabled
               ? "bg-[#151D2E] text-slate-200 hover:bg-slate-700 hover:text-white"
               : "bg-[#EF4444] text-white shadow-lg shadow-[#EF4444]/30 hover:bg-red-600"
@@ -62,7 +64,8 @@ export default function MeetingControls({
         {/* 2. Camera Toggle */}
         <button
           onClick={onToggleCamera}
-          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 ${
+          disabled={meetingEnded}
+          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
             cameraEnabled
               ? "bg-[#151D2E] text-slate-200 hover:bg-slate-700 hover:text-white"
               : "bg-[#EF4444] text-white shadow-lg shadow-[#EF4444]/30 hover:bg-red-600"
@@ -76,7 +79,8 @@ export default function MeetingControls({
         {/* 3. Screen Share */}
         <button
           onClick={onToggleScreenShare}
-          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 ${
+          disabled={meetingEnded}
+          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
             isScreenSharing
               ? "bg-[#6366F1] text-white shadow-lg shadow-[#6366F1]/40"
               : "bg-[#151D2E] text-slate-200 hover:bg-slate-700 hover:text-white"
@@ -90,7 +94,8 @@ export default function MeetingControls({
         {/* 4. Raise Hand */}
         <button
           onClick={onToggleRaiseHand}
-          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 ${
+          disabled={meetingEnded}
+          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
             handRaised
               ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/40"
               : "bg-[#151D2E] text-slate-200 hover:bg-slate-700 hover:text-white"
@@ -104,7 +109,8 @@ export default function MeetingControls({
         {/* 5. Reactions Trigger */}
         <button
           onClick={() => setShowReactions((prev) => !prev)}
-          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 ${
+          disabled={meetingEnded}
+          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
             showReactions
               ? "bg-[#1A2437] text-amber-300 ring-2 ring-amber-400/50"
               : "bg-[#151D2E] text-slate-200 hover:bg-slate-700 hover:text-white"
@@ -148,7 +154,8 @@ export default function MeetingControls({
         {/* 8. Voice Translation Toggle */}
         <button
           onClick={() => onToggleSidebar("translation")}
-          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 ${
+          disabled={meetingEnded}
+          className={`flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
             activeSidebarTab === "translation" || translationEnabled
               ? "bg-[#38BDF8] text-slate-950 shadow-lg shadow-[#38BDF8]/40"
               : "bg-[#151D2E] text-slate-200 hover:bg-slate-700 hover:text-white"

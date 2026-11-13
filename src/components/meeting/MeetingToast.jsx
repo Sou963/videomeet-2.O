@@ -27,6 +27,10 @@ export default function MeetingToast({ toast, onDismiss }) {
       bg: "bg-[#101624]/95 border-indigo-500/40 text-indigo-200",
       icon: <InfoIcon className="w-4 h-4 text-indigo-400 shrink-0" />,
     },
+    warning: {
+      bg: "bg-[#101624]/95 border-amber-500/40 text-amber-200",
+      icon: <InfoIcon className="w-4 h-4 text-amber-400 shrink-0" />,
+    },
   }[toast.type || "info"];
 
   return (

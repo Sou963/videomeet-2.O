@@ -71,8 +71,24 @@ export function createPeer({
   socket,
   onRemoteStream,
   onConnectionStatus,
+  onDataChannel,
 }) {
   const pc = new RTCPeerConnection({ iceServers, iceCandidatePoolSize: 4 });
+
+  function attachFileChannel(channel) {
+    channel.binaryType = "arraybuffer";
+    channel.bufferedAmountLowThreshold = 256 * 1024;
+    onDataChannel?.(channel, peerId);
+  }
+
+  pc.ondatachannel = ({ channel }) => {
+    if (channel.label === "file-transfer") attachFileChannel(channel);
+    else channel.close();
+  };
+
+  if (myId < peerId) {
+    attachFileChannel(pc.createDataChannel("file-transfer", { ordered: true }));
+  }
 
   // Queue ICE candidates that arrive before remote description is set
   let remoteDescriptionSet = false;

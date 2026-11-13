@@ -12,6 +12,7 @@ export default function ParticipantsPanel({
   handRaised,
   onAnnounce,
   onRemoveParticipant,
+  meetingEnded = false,
 }) {
   const [announcementText, setAnnouncementText] = useState("");
   const [announcementSent, setAnnouncementSent] = useState(false);
@@ -106,7 +107,7 @@ export default function ParticipantsPanel({
                     ✋
                   </span>
                 )}
-                {isHost && p.role !== "host" && (
+                {isHost && !meetingEnded && p.role !== "host" && (
                   <button
                     type="button"
                     onClick={() => onRemoveParticipant(p.peerId)}
@@ -135,7 +136,7 @@ export default function ParticipantsPanel({
       </div>
 
       {/* ── Host Announcement (Host only) ───────────────────────── */}
-      {isHost && (
+      {isHost && !meetingEnded && (
         <form
           onSubmit={handleAnnounce}
           className="border-t border-slate-800/80 p-3.5 bg-[#101624]/60"

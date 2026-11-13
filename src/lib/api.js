@@ -34,7 +34,9 @@ export function clearMeetingAccessToken(meetingId) {
 }
 
 function meetingIdFromRequest(path, options) {
-  const pathMeetingId = path.match(/^\/meetings\/([^/?]+)\/(?:messages|session)(?:[/?]|$)/)?.[1];
+  const pathMeetingId = path.match(
+    /^\/meetings\/([^/?]+)\/(?:messages|session|status)(?:[/?]|$)/
+  )?.[1];
   if (pathMeetingId) return decodeURIComponent(pathMeetingId);
 
   const query = path.match(/[?&]meetingId=([^&]+)/)?.[1];

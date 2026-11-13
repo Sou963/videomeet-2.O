@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { SendIcon, ChatIcon } from "./icons";
 
-export default function ChatPanel({ meetingId, name, socketRef }) {
+export default function ChatPanel({ meetingId, name, socketRef, disabled = false }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const bottomRef = useRef(null);
@@ -42,7 +42,7 @@ export default function ChatPanel({ meetingId, name, socketRef }) {
   function send(e) {
     e.preventDefault();
     const trimmed = text.trim();
-    if (!trimmed || !socketRef?.current?.connected) return;
+    if (!trimmed || disabled || !socketRef?.current?.connected) return;
     socketRef.current.emit("chat-message", {
       meetingId,
       message: trimmed,
@@ -111,13 +111,14 @@ export default function ChatPanel({ meetingId, name, socketRef }) {
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
+          disabled={disabled}
           className="min-w-0 flex-1 rounded-xl border border-slate-700/80 bg-[#151D2E] px-3.5 py-2 text-xs text-white placeholder-slate-500 outline-none transition focus:border-[#6366F1]"
-          placeholder="Send a message to everyone…"
+          placeholder={disabled ? "Meeting has ended" : "Send a message to everyone…"}
           maxLength={1500}
         />
         <button
           type="submit"
-          disabled={!text.trim()}
+          disabled={disabled || !text.trim()}
           className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#6366F1] text-white transition hover:bg-indigo-600 disabled:opacity-40 shrink-0"
           title="Send"
         >

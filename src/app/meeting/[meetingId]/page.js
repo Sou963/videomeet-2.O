@@ -149,9 +149,14 @@ export default function MeetingPage() {
         isGuest={isGuest}
         initialCameraEnabled={camera}
         initialMicEnabled={microphone}
-        onLeave={() => {
+        meetingStatus={meeting?.status || "active"}
+        hostEndedAt={meeting?.hostEndedAt}
+        deactivateAt={meeting?.deactivateAt}
+        deactivatedAt={meeting?.deactivatedAt}
+        serverNow={meeting?.serverNow}
+        onLeave={(reason) => {
           clearMeetingAccessToken(meetingId);
-          router.push(user?.id ? "/dashboard" : "/");
+          router.push(reason === "deactivated" ? "/" : user?.id ? "/dashboard" : "/");
         }}
       />
     );
@@ -181,12 +186,12 @@ export default function MeetingPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-800/80 pb-6 gap-3">
           <div>
             <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
-              meeting?.status === "inactive" || meeting?.status === "ended"
+              ["inactive", "ended", "ending", "deactivated"].includes(meeting?.status)
                 ? "border-red-500/30 bg-red-500/10 text-red-300"
                 : "border-indigo-500/30 bg-indigo-500/10 text-[#38BDF8]"
             }`}>
               <span>
-                {meeting?.status === "inactive" || meeting?.status === "ended"
+                {["inactive", "ended", "ending", "deactivated"].includes(meeting?.status)
                   ? "Meeting Unavailable"
                   : "Ready to Join"}
               </span>
@@ -200,9 +205,13 @@ export default function MeetingPage() {
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
-            {meeting?.status === "inactive" || meeting?.status === "ended" ? (
+            {["inactive", "ended", "ending", "deactivated"].includes(meeting?.status) ? (
               <span className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300">
-                {meeting.status === "ended" ? "Meeting Ended" : "Meeting Deactivated"}
+                {meeting.status === "ending"
+                  ? "Meeting Ending"
+                  : meeting.status === "ended"
+                    ? "Meeting Ended"
+                    : "Meeting Deactivated"}
               </span>
             ) : null}
           </div>
@@ -315,8 +324,7 @@ export default function MeetingPage() {
                   !meeting ||
                   joining ||
                   (!user && displayName.trim().length < 2) ||
-                  meeting.status === "inactive" ||
-                  meeting.status === "ended"
+                  !["active", "scheduled"].includes(meeting.status)
                 }
                 onClick={join}
                 className="flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[#6366F1] font-bold text-white shadow-xl shadow-[#6366F1]/25 transition hover:bg-indigo-600 active:scale-[0.98] disabled:opacity-50"

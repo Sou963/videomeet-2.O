@@ -22,10 +22,13 @@ export default function MeetingMoreMenu({
   onEndMeeting,
   viewMode,
   onToggleViewMode,
+  meetingEnded = false,
+  endingRequest = false,
 }) {
   const menuRef = useRef(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showEndConfirmation, setShowEndConfirmation] = useState(false);
 
   // Close when clicking outside
   useEffect(() => {
@@ -49,7 +52,7 @@ export default function MeetingMoreMenu({
     onClose();
   }
 
-  if (!isOpen && !showInfoModal && !showShortcutsModal) return null;
+  if (!isOpen && !showInfoModal && !showShortcutsModal && !showEndConfirmation) return null;
 
   return (
     <>
@@ -106,14 +109,15 @@ export default function MeetingMoreMenu({
             <span>Keyboard Shortcuts</span>
           </button>
 
-          {isHost && (
+          {isHost && !meetingEnded && (
             <>
               <div className="h-px bg-slate-700/60 my-1" />
               <button
                 onClick={() => {
-                  onEndMeeting();
+                  setShowEndConfirmation(true);
                   onClose();
                 }}
+                disabled={endingRequest}
                 className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition text-left"
               >
                 <PhoneOffIcon className="w-4 h-4 text-red-400" />
@@ -121,6 +125,44 @@ export default function MeetingMoreMenu({
               </button>
             </>
           )}
+        </div>
+      )}
+
+      {showEndConfirmation && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="end-meeting-title"
+            aria-describedby="end-meeting-description"
+            className="w-full max-w-md rounded-3xl border border-red-500/30 bg-[#151D2E] p-6 text-slate-200 shadow-2xl"
+          >
+            <h3 id="end-meeting-title" className="text-base font-bold text-white">End meeting for everyone?</h3>
+            <p id="end-meeting-description" className="mt-2 text-xs leading-relaxed text-slate-400">
+              Participants will be notified, new activity and joins will stop, and this room will deactivate in five minutes.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowEndConfirmation(false)}
+                disabled={endingRequest}
+                className="rounded-xl border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEndConfirmation(false);
+                  onEndMeeting();
+                }}
+                disabled={endingRequest}
+                className="rounded-xl bg-red-500 px-4 py-2 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+              >
+                {endingRequest ? "Ending meeting…" : "End meeting"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

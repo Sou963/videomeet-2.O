@@ -18,6 +18,7 @@ export default function TranslationPanel({
   setLanguage,
   status,
   error,
+  disabled = false,
 }) {
   const currentStatus = STATUS_LABELS[status] || STATUS_LABELS.idle;
 
@@ -45,6 +46,7 @@ export default function TranslationPanel({
           <button
             type="button"
             onClick={() => setEnabled(!enabled)}
+            disabled={disabled}
             aria-pressed={enabled}
             className={`shrink-0 rounded-xl px-3 py-2 text-xs font-semibold transition ${
               enabled
@@ -80,6 +82,7 @@ export default function TranslationPanel({
           id="translation-language"
           value={language}
           onChange={(event) => setLanguage(event.target.value)}
+          disabled={disabled}
           className="w-full rounded-xl border border-slate-700/80 bg-[#151D2E] px-3.5 py-2.5 text-xs text-white outline-none transition focus:border-[#38BDF8]"
         >
           {VOICE_LANGUAGES.map((option) => (
@@ -97,6 +100,12 @@ export default function TranslationPanel({
           affects what you hear.
         </p>
       </div>
+
+      {disabled && (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-950/20 px-3 py-2 text-[11px] text-amber-300">
+          New translation sessions are disabled because the meeting has ended.
+        </p>
+      )}
 
       <div className="rounded-2xl border border-slate-800/80 bg-[#151D2E]/50 p-3.5 text-[11px] leading-relaxed text-slate-400">
         <div className="flex items-start gap-2">
