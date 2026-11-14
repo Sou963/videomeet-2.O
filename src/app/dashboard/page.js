@@ -43,7 +43,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    Promise.all([api("/auth/me"), api("/meetings")])
+    Promise.all([api("/auth/me"), api("/meetings", { cache: "no-store" })])
       .then(([userData, meetingData]) => {
         setUser(userData.user);
         setMeetings(meetingData.meetings || []);
