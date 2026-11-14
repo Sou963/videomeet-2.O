@@ -29,6 +29,8 @@ export default function MeetingHeader({
   onToggleSidebar,
   activeSidebarTab,
   onOpenMoreMenu,
+  remoteParticipants = [],
+  isHost = false,
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -68,11 +70,41 @@ export default function MeetingHeader({
         </div>
       </div>
 
-      {/* ── Center Section ────────────────────────────────────────── */}
-      <div className="hidden md:flex items-center gap-3">
-        <ConnectionStatus status={connectionState} />
+      {/* ── Center Section: Participants short form avatars & timer ───────── */}
+      <div className="flex items-center gap-3">
+        <div className="hidden sm:flex items-center">
+          <ConnectionStatus status={connectionState} />
+        </div>
 
-        <div className="flex items-center gap-1.5 rounded-full border border-slate-800/80 bg-[#101624]/80 px-3 py-1 text-xs text-slate-300 backdrop-blur-md">
+        {/* Quick Participant Avatars (Clickable to open drawer) */}
+        <button
+          type="button"
+          onClick={() => onToggleSidebar("people")}
+          className="group flex items-center gap-1.5 rounded-full border border-slate-800/80 bg-[#101624]/90 px-2.5 py-1 text-xs text-slate-300 backdrop-blur-md transition hover:border-slate-700 hover:bg-[#151D2E]"
+          title="Quick view participants — click to manage"
+        >
+          {/* Overlapping participant short form avatars */}
+          <div className="flex -space-x-1.5 overflow-hidden py-0.5">
+            {remoteParticipants.slice(0, 4).map((p) => {
+              const shortName = p.name ? p.name.slice(0, 2).toUpperCase() : "P";
+              return (
+                <div
+                  key={p.peerId}
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-tr from-[#6366F1] to-[#38BDF8] text-[9px] font-bold text-white ring-1 ring-[#080B14]"
+                  title={p.name || "Participant"}
+                >
+                  {shortName}
+                </div>
+              );
+            })}
+          </div>
+
+          <span className="font-semibold text-[11px] text-slate-300 group-hover:text-white">
+            {remoteParticipants.length === 0 ? "Solo" : `${remoteParticipants.length} remote`}
+          </span>
+        </button>
+
+        <div className="hidden md:flex items-center gap-1.5 rounded-full border border-slate-800/80 bg-[#101624]/80 px-3 py-1 text-xs text-slate-300 backdrop-blur-md">
           <span className="text-[11px] font-mono font-medium tracking-wide">
             {durationText}
           </span>

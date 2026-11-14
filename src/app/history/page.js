@@ -13,22 +13,37 @@ import {
   Search,
   Calendar,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import BrandLogo from "@/components/common/BrandLogo";
 
 export default function HistoryPage() {
   const [meetings, setMeetings] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState(null);
   const [search, setSearch] = useState("");
   const router = useRouter();
 
   useEffect(() => {
-    api("/meetings")
-      .then(({ meetings }) => setMeetings(meetings || []))
+    Promise.all([api("/auth/me"), api("/meetings")])
+      .then(([userData, meetingData]) => {
+        setCurrentUser(userData.user || null);
+        setMeetings(meetingData.meetings || []);
+      })
       .catch((e) => setError(e.message));
   }, []);
+
+  async function deleteMeeting(meetingId) {
+    if (!confirm("Are you sure you want to permanently delete this meeting?")) return;
+    try {
+      await api(`/meetings/${meetingId}`, { method: "DELETE" });
+      setMeetings((prev) => prev.filter((m) => m.meetingId !== meetingId));
+    } catch (err) {
+      setError(err.message || "Failed to delete meeting.");
+    }
+  }
 
   function copyMeetingId(id) {
     navigator.clipboard.writeText(id);
@@ -138,6 +153,17 @@ export default function HistoryPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {currentUser && (m.hostId?._id === currentUser._id || m.hostId === currentUser._id) && (
+                    <button
+                      type="button"
+                      onClick={() => deleteMeeting(m.meetingId)}
+                      className="flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                      title="Permanently Delete Meeting"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => copyMeetingId(m.meetingId)}

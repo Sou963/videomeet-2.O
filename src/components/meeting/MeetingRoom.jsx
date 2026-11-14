@@ -461,6 +461,8 @@ export default function MeetingRoom({
         onToggleSidebar={handleToggleSidebar}
         activeSidebarTab={sidebarTab}
         onOpenMoreMenu={() => setIsMoreMenuOpen(true)}
+        remoteParticipants={remoteParticipants}
+        isHost={isHost}
       />
 
       {(error || mediaWarnings.length > 0) && (

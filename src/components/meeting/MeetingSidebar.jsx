@@ -131,7 +131,13 @@ export default function MeetingSidebar({
           <FileSharingPanel
             localName={localName}
             remoteParticipants={remoteParticipants}
-            {...fileSharing}
+            transfers={fileSharing?.transfers}
+            notification={fileSharing?.notification}
+            onDismissNotification={fileSharing?.dismissNotification}
+            onShareFile={fileSharing?.shareFile}
+            onCancelTransfer={fileSharing?.cancelTransfer}
+            onDownload={fileSharing?.downloadTransfer}
+            canDownload={fileSharing?.canDownload}
             disabled={meetingEnded}
           />
         )}

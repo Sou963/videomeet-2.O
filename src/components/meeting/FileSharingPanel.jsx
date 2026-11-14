@@ -33,29 +33,38 @@ function statusLabel(status) {
 
 export default function FileSharingPanel({
   localName,
-  remoteParticipants,
-  transfers,
+  remoteParticipants = [],
+  transfers = [],
   notification,
   onDismissNotification,
+  dismissNotification,
   onShareFile,
+  shareFile,
   onCancelTransfer,
+  cancelTransfer,
   onDownload,
+  downloadTransfer,
   canDownload,
   disabled,
 }) {
+  const handleShareFile = onShareFile || shareFile;
+  const handleCancelTransfer = onCancelTransfer || cancelTransfer;
+  const handleDownload = onDownload || downloadTransfer;
+  const handleDismissNotification = onDismissNotification || dismissNotification;
+
   const inputRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [recipientId, setRecipientId] = useState("all");
 
   function share(event) {
     event.preventDefault();
-    if (!selectedFile || disabled) return;
+    if (!selectedFile || disabled || typeof handleShareFile !== "function") return;
     const recipients = recipientId === "all"
       ? remoteParticipants.map(({ peerId, name }) => ({ id: peerId, name }))
       : remoteParticipants
           .filter((participant) => participant.peerId === recipientId)
           .map(({ peerId, name }) => ({ id: peerId, name }));
-    onShareFile(selectedFile, recipients);
+    handleShareFile(selectedFile, recipients);
     setSelectedFile(null);
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -128,7 +137,7 @@ export default function FileSharingPanel({
         >
           <div className="flex items-start justify-between gap-2">
             <span>{notification.message}</span>
-            <button type="button" onClick={onDismissNotification} aria-label="Dismiss notification" className="text-slate-400 hover:text-white">×</button>
+            <button type="button" onClick={handleDismissNotification} aria-label="Dismiss notification" className="text-slate-400 hover:text-white">×</button>
           </div>
         </div>
       )}
@@ -185,15 +194,15 @@ export default function FileSharingPanel({
                   {active ? (
                     <button
                       type="button"
-                      onClick={() => onCancelTransfer(transfer.transferId)}
+                      onClick={() => handleCancelTransfer?.(transfer.transferId)}
                       className="rounded-md px-2 py-1 text-red-300 hover:bg-red-500/10"
                     >
                       Cancel
                     </button>
-                  ) : transfer.direction === "received" && transfer.transferStatus === "completed" && canDownload(transfer.transferId) ? (
+                  ) : transfer.direction === "received" && transfer.transferStatus === "completed" && canDownload?.(transfer.transferId) ? (
                     <button
                       type="button"
-                      onClick={() => onDownload(transfer.transferId)}
+                      onClick={() => handleDownload?.(transfer.transferId)}
                       className="rounded-md px-2 py-1 font-semibold text-[#38BDF8] hover:bg-sky-500/10"
                     >
                       Download
