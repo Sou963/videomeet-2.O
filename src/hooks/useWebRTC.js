@@ -68,6 +68,8 @@ export default function useWebRTC({
   const [micEnabled, setMicEnabled] = useState(initialMicEnabled);
   const [cameraEnabled, setCameraEnabled] = useState(initialCameraEnabled);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  // Mirror of screenStreamRef so the local preview can render the shared surface.
+  const [screenStream, setScreenStream] = useState(null);
   const [raisedHands, setRaisedHands] = useState({}); // { peerId: bool }
   const [reactions, setReactions] = useState([]); // [{ id, peerId, reaction, name, ts }]
   const [announcement, setAnnouncement] = useState(null);
@@ -357,9 +359,16 @@ export default function useWebRTC({
       }
 
       function onRoomMembers(members = []) {
-        members.forEach(({ peerId, name: peerName, role }) => {
+        members.forEach(({ peerId, name: peerName, role, audio, video, screenSharing }) => {
           if (peerId && peerId !== socket.id) {
             createPeerForRemote(peerId, peerName, role);
+            if (audio !== undefined || video !== undefined || screenSharing !== undefined) {
+              updateRemoteParticipant(peerId, {
+                ...(audio !== undefined ? { audio } : {}),
+                ...(video !== undefined ? { video } : {}),
+                ...(screenSharing !== undefined ? { screenSharing } : {}),
+              });
+            }
           }
         });
       }
@@ -421,8 +430,12 @@ export default function useWebRTC({
         }
       }
 
-      function onMediaStatus({ peerId, audio, video }) {
-        updateRemoteParticipant(peerId, { audio, video });
+      function onMediaStatus({ peerId, audio, video, screenSharing }) {
+        updateRemoteParticipant(peerId, {
+          ...(audio !== undefined ? { audio } : {}),
+          ...(video !== undefined ? { video } : {}),
+          ...(screenSharing !== undefined ? { screenSharing } : {}),
+        });
       }
 
       function onMeetingEnding_(details) {
@@ -442,6 +455,7 @@ export default function useWebRTC({
         setLocalStream(null);
         setRemoteParticipants([]);
         setIsScreenSharing(false);
+        setScreenStream(null);
         onMeetingDeactivatedRef.current?.(details);
         onMeetingEndedRef.current?.(details);
       }
@@ -650,6 +664,7 @@ export default function useWebRTC({
         audio: true,
       });
       screenStreamRef.current = screenStream;
+      setScreenStream(screenStream);
       setIsScreenSharing(true);
 
       const screenVideoTrack = screenStream.getVideoTracks()[0];
@@ -665,6 +680,7 @@ export default function useWebRTC({
         replaceVideoTrack(peersRef.current, cameraTrack || null);
         screenStreamRef.current?.getTracks().forEach((t) => t.stop());
         screenStreamRef.current = null;
+        setScreenStream(null);
         setIsScreenSharing(false);
         socketRef.current?.emit("media-status", {
           meetingId,
@@ -677,7 +693,7 @@ export default function useWebRTC({
       socketRef.current?.emit("media-status", {
         meetingId,
         audio: micEnabledRef.current,
-        video: cameraEnabledRef.current,
+        video: cameraEnabledRef.current || Boolean(screenVideoTrack),
         screenSharing: true,
       });
     } catch {
@@ -687,16 +703,15 @@ export default function useWebRTC({
 
   const stopScreenShare = useCallback(() => {
     const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
-    if (cameraTrack) {
-      replaceVideoTrack(peersRef.current, cameraTrack);
-    }
+    replaceVideoTrack(peersRef.current, cameraTrack || null);
     screenStreamRef.current?.getTracks().forEach((t) => t.stop());
     screenStreamRef.current = null;
+    setScreenStream(null);
     setIsScreenSharing(false);
     socketRef.current?.emit("media-status", {
       meetingId,
       audio: micEnabledRef.current,
-      video: cameraEnabledRef.current,
+      video: Boolean(cameraEnabledRef.current && cameraTrack),
       screenSharing: false,
     });
   }, [meetingId, peersRef, socketRef]);
@@ -755,6 +770,7 @@ export default function useWebRTC({
     micEnabled,
     cameraEnabled,
     isScreenSharing,
+    screenStream,
     handRaised,
     raisedHands,
     reactions,

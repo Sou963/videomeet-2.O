@@ -112,6 +112,7 @@ export default function MeetingRoom({
   // ── WebRTC Hook ──────────────────────────────────────────────────
   const {
     localStream,
+    screenStream,
     remoteParticipants,
     connectionState,
     turnConfigured,
@@ -480,6 +481,7 @@ export default function MeetingRoom({
         <MeetingStage
           viewMode={viewMode}
           localStream={localStream}
+          screenStream={screenStream}
           localName={name}
           isHost={isHost}
           micEnabled={micEnabled}
@@ -570,10 +572,10 @@ export default function MeetingRoom({
                 <p className="mt-2 text-sm leading-relaxed text-slate-300">
                   The host has ended this meeting. This room will be deactivated in 5 minutes.
                 </p>
-                <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                <p className="mt-6 text-xs font-medium text-night-ink-3">
                   Room deactivation in
                 </p>
-                <p className="mt-1 font-mono text-5xl font-bold tracking-wider text-[#38BDF8]" aria-live="polite">
+                <p className="tnum mt-1 font-mono text-4xl font-medium text-night-ink" aria-live="polite">
                   {deactivationCountdown}
                 </p>
               </>

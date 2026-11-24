@@ -1,14 +1,53 @@
 "use client";
 
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import ParticipantGrid from "./ParticipantGrid";
 import ParticipantCard from "./ParticipantCard";
 import SelfVideo from "./SelfVideo";
-import { ScreenShareIcon, CopyIcon, UsersIcon, CheckIcon } from "./icons";
+import {
+  ScreenShareIcon,
+  CopyIcon,
+  UsersIcon,
+  CheckIcon,
+  MaximizeIcon,
+  MinimizeIcon,
+} from "./icons";
+
+/**
+ * A plain video element that keeps following the given stream.
+ * The ref callback alone only ran on mount, so a stream that changed
+ * after the first paint (screen share start/stop) was never attached.
+ */
+function StreamVideo({ stream, className, muted = true }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const element = videoRef.current;
+    if (!element) return;
+    element.srcObject = stream || null;
+    if (stream) {
+      element.play().catch(() => {});
+    }
+    return () => {
+      element.srcObject = null;
+    };
+  }, [stream]);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted={muted}
+      className={className}
+    />
+  );
+}
 
 export default function MeetingStage({
   viewMode = "gallery",
   localStream,
+  screenStream,
   localName,
   isHost,
   micEnabled,
@@ -28,14 +67,18 @@ export default function MeetingStage({
   // Detect who is sharing their screen
   const screenSharer = useMemo(() => {
     if (isScreenSharing) {
-      return { isLocal: true, name: localName || "You", stream: localStream };
+      return {
+        isLocal: true,
+        name: localName || "You",
+        stream: screenStream || localStream,
+      };
     }
     const remoteSharer = remoteParticipants.find((p) => p.screenSharing && p.stream);
     if (remoteSharer) {
       return { isLocal: false, name: remoteSharer.name, participant: remoteSharer };
     }
     return null;
-  }, [isScreenSharing, localName, localStream, remoteParticipants]);
+  }, [isScreenSharing, localName, localStream, screenStream, remoteParticipants]);
 
   // If someone is sharing screen or viewMode is 'speaker' with at least 1 remote participant
   const isSpeakerMode = viewMode === "speaker" || !!screenSharer;
@@ -85,25 +128,13 @@ export default function MeetingStage({
               /* Screen Share View */
               <div className="relative h-full w-full">
                 {screenSharer.isLocal ? (
-                  <video
-                    ref={(el) => {
-                      if (el && localStream) el.srcObject = localStream;
-                    }}
-                    autoPlay
-                    playsInline
-                    muted
+                  <StreamVideo
+                    stream={screenSharer.stream}
                     className="h-full w-full object-contain bg-black"
                   />
                 ) : (
-                  <video
-                    ref={(el) => {
-                      if (el && screenSharer.participant.stream) {
-                        el.srcObject = screenSharer.participant.stream;
-                      }
-                    }}
-                    autoPlay
-                    playsInline
-                    muted
+                  <StreamVideo
+                    stream={screenSharer.participant.stream}
                     className="h-full w-full object-contain bg-black"
                   />
                 )}
