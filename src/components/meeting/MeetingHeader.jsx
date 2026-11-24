@@ -90,7 +90,7 @@ export default function MeetingHeader({
               return (
                 <div
                   key={p.peerId}
-                  className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-tr from-[#6366F1] to-[#38BDF8] text-[9px] font-bold text-white ring-1 ring-[#080B14]"
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-night-raised text-[9px] font-medium text-night-ink ring-1 ring-night-line"
                   title={p.name || "Participant"}
                 >
                   {shortName}

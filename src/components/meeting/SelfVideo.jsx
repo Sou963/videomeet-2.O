@@ -28,10 +28,10 @@ export default function SelfVideo({
 
   return (
     <div
-      className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl sm:rounded-3xl border bg-[#101624] transition-all duration-300 ${
+      className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl sm:rounded-3xl border bg-night-surface transition-colors duration-200 ${
         isSpeaking
-          ? "border-[#6366F1] ring-2 ring-[#6366F1]/50 shadow-[0_0_20px_rgba(99,102,241,0.25)]"
-          : "border-slate-800/80 hover:border-slate-700/80 shadow-md"
+          ? "border-brand-soft ring-1 ring-brand-soft/40"
+          : "border-night-line hover:border-night-ink-3/40"
       } ${
         isFloating
           ? "w-48 sm:w-56 aspect-video shadow-2xl z-20 pointer-events-auto"
@@ -48,8 +48,8 @@ export default function SelfVideo({
           className="h-full w-full object-cover scale-x-[-1]"
         />
       ) : (
-        <div className="flex h-full w-full min-h-[160px] flex-col items-center justify-center bg-gradient-to-b from-[#151D2E] to-[#101624]">
-          <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-gradient-to-tr from-[#6366F1] to-[#38BDF8] text-2xl sm:text-3xl font-bold text-white shadow-lg shadow-[#6366F1]/20">
+        <div className="flex h-full w-full min-h-[160px] flex-col items-center justify-center bg-night-surface">
+          <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-night-raised text-2xl sm:text-3xl font-medium text-night-ink">
             {initial}
           </div>
         </div>

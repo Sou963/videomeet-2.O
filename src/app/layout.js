@@ -12,18 +12,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "VideoMeet | Ultra-HD Meetings & AI Voice Translation",
+  title: "VideoMeet | Video meetings with live voice translation",
   description:
-    "Next-generation video meetings powered by React 19, WebRTC peer-to-peer encryption, and real-time AI speech translation.",
+    "Browser video meetings for small teams, with peer-to-peer WebRTC calls, file sharing, and live Bengali and English voice translation.",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+      <body className="min-h-full flex flex-col">
+        <noscript>
+          <style>{`.reveal{opacity:1 !important;transform:none !important}`}</style>
+        </noscript>
         {children}
       </body>
     </html>

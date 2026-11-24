@@ -11,12 +11,23 @@ import {
   Copy,
   Check,
   Search,
-  Calendar,
   AlertCircle,
   Trash2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import BrandLogo from "@/components/common/BrandLogo";
+
+function StatusDot({ status }) {
+  const live = status === "live" || status === "active";
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 font-mono text-[11px] text-ink-3">
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${live ? "bg-positive" : "bg-ink-3"}`}
+      />
+      {status || "ready"}
+    </span>
+  );
+}
 
 export default function HistoryPage() {
   const [meetings, setMeetings] = useState([]);
@@ -36,12 +47,12 @@ export default function HistoryPage() {
   }, []);
 
   async function deleteMeeting(meetingId) {
-    if (!confirm("Are you sure you want to permanently delete this meeting?")) return;
+    if (!confirm("Permanently delete this meeting?")) return;
     try {
       await api(`/meetings/${meetingId}`, { method: "DELETE" });
       setMeetings((prev) => prev.filter((m) => m.meetingId !== meetingId));
     } catch (err) {
-      setError(err.message || "Failed to delete meeting.");
+      setError(err.message || "Could not delete the meeting.");
     }
   }
 
@@ -60,143 +71,154 @@ export default function HistoryPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50/70 bg-grid-slate flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-20 max-w-5xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-4">
+    <div className="flex min-h-screen flex-col bg-paper">
+      <header className="sticky top-0 z-40 border-b border-hairline bg-surface/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
+          <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50"
+              aria-label="Back to dashboard"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-2 transition-colors duration-150 hover:bg-raised hover:text-ink"
             >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Dashboard</span>
+              <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
             </Link>
-
-            <BrandLogo href="/" size="sm" showBadge={false} />
+            <BrandLogo href="/" size="sm" />
           </div>
+          <span className="tnum font-mono text-xs text-ink-3">
+            {filteredMeetings.length} rooms
+          </span>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="mx-auto max-w-5xl w-full flex-1 px-4 py-8 sm:px-6">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">
-              Meeting History
+            <h1 className="text-[28px] font-medium leading-[1.15] tracking-[-0.02em] text-ink">
+              Meeting history
             </h1>
-            <p className="mt-1 text-sm text-slate-600">
-              Review your past and upcoming meeting sessions
+            <p className="mt-1 text-[13px] text-ink-2">
+              Past and scheduled rooms you have access to
             </p>
           </div>
 
-          {/* Search bar */}
-          <div className="relative w-full sm:w-72">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <div className="relative w-full sm:w-64">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"
+              strokeWidth={1.75}
+            />
+            <label htmlFor="history-search" className="sr-only">
+              Search meetings
+            </label>
             <input
+              id="history-search"
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by title or ID..."
-              className="h-11 w-full rounded-2xl border border-slate-300/80 bg-white pl-10 pr-4 text-xs font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              placeholder="Search title or ID"
+              className="h-11 w-full rounded-lg border border-hairline bg-surface pl-9 pr-3.5 text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink-3 focus:border-brand"
             />
           </div>
         </div>
 
         {error && (
-          <div className="mt-6 flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-600">
-            <AlertCircle className="h-4 w-4 shrink-0" />
+          <div className="mt-6 flex items-start gap-2 rounded-lg border border-negative/25 bg-negative/5 p-3 text-[13px] text-negative">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.75} />
             <span>{error}</span>
           </div>
         )}
 
-        <div className="mt-8 space-y-3">
+        <div className="mt-6 space-y-2">
           {filteredMeetings.length > 0 ? (
-            filteredMeetings.map((m) => (
-              <article
-                key={m._id}
-                className="group flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs transition-all duration-200 hover:border-blue-300 hover:shadow-md sm:flex-row sm:items-center"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition">
-                    <Video className="h-5 w-5" />
-                  </div>
+            filteredMeetings.map((m) => {
+              const isHost =
+                currentUser &&
+                (m.hostId?._id === currentUser._id || m.hostId === currentUser._id);
 
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="font-bold text-slate-900 text-base">
-                        {m.title || "Untitled Meeting"}
-                      </h2>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
-                        {m.status || "ready"}
-                      </span>
-                    </div>
+              return (
+                <article
+                  key={m._id}
+                  className="rounded-xl border border-hairline bg-surface p-4 sm:p-5"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-raised text-ink-2">
+                        <Video className="h-4 w-4" strokeWidth={1.5} />
+                      </div>
 
-                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                      <span className="font-mono text-slate-700">{m.meetingId}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(m.createdAt).toLocaleDateString()}
-                      </span>
-                      {m.hasPassword && (
-                        <>
-                          <span>•</span>
-                          <span className="flex items-center gap-1 text-amber-600">
-                            <Lock className="h-3 w-3" />
-                            Password Protected
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="truncate text-[15px] font-medium text-ink">
+                            {m.title || "Untitled meeting"}
+                          </h2>
+                          <StatusDot status={m.status} />
+                        </div>
+
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-3">
+                          <span className="tnum font-mono">{m.meetingId}</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" strokeWidth={1.75} />
+                            {new Date(m.createdAt).toLocaleDateString()}
                           </span>
-                        </>
+                          {m.hasPassword && (
+                            <span className="flex items-center gap-1">
+                              <Lock className="h-3 w-3" strokeWidth={1.75} />
+                              Password protected
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:items-center">
+                      {isHost && (
+                        <button
+                          type="button"
+                          onClick={() => deleteMeeting(m.meetingId)}
+                          aria-label="Delete meeting"
+                          className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-hairline px-3 text-xs font-medium text-negative transition-colors duration-150 hover:bg-negative/5"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} />
+                          <span className="sm:sr-only">Delete</span>
+                        </button>
                       )}
+
+                      <button
+                        type="button"
+                        onClick={() => copyMeetingId(m.meetingId)}
+                        className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-hairline px-3 text-xs font-medium text-ink-2 transition-colors duration-150 hover:bg-raised hover:text-ink"
+                      >
+                        {copiedId === m.meetingId ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" strokeWidth={1.75} />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" strokeWidth={1.75} />
+                            Copy ID
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/meeting/${m.meetingId}`)}
+                        className="col-span-2 flex h-9 items-center justify-center gap-1.5 rounded-lg bg-brand px-4 text-xs font-medium text-white transition-colors duration-150 hover:bg-brand-hover sm:col-span-1"
+                      >
+                        <Video className="h-3.5 w-3.5" strokeWidth={1.75} />
+                        Join room
+                      </button>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {currentUser && (m.hostId?._id === currentUser._id || m.hostId === currentUser._id) && (
-                    <button
-                      type="button"
-                      onClick={() => deleteMeeting(m.meetingId)}
-                      className="flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                      title="Permanently Delete Meeting"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => copyMeetingId(m.meetingId)}
-                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                  >
-                    {copiedId === m.meetingId ? (
-                      <>
-                        <Check className="h-3.5 w-3.5 text-emerald-600" />
-                        <span className="text-emerald-600 font-bold">Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5 text-slate-400" />
-                        <span>Copy ID</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => router.push(`/meeting/${m.meetingId}`)}
-                    className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 active:scale-95"
-                  >
-                    <Video className="h-3.5 w-3.5" />
-                    <span>Join Room</span>
-                  </button>
-                </div>
-              </article>
-            ))
+                </article>
+              );
+            })
           ) : (
-            <div className="rounded-3xl border border-dashed border-slate-300 bg-white/50 p-12 text-center">
-              <p className="text-sm text-slate-500">
-                {search ? "No meetings match your search query." : "No meeting history found."}
+            <div className="rounded-xl border border-dashed border-hairline bg-surface px-6 py-12 text-center">
+              <p className="text-[13px] text-ink-2">
+                {search
+                  ? "No meetings match that search."
+                  : "No meeting history yet."}
               </p>
             </div>
           )}

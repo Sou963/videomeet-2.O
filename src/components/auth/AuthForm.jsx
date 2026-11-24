@@ -3,10 +3,25 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import {
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ArrowLeft,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import BrandLogo from "@/components/common/BrandLogo";
-import ReactLogo from "@/components/common/ReactLogo";
+
+const fieldClass =
+  "h-11 w-full rounded-lg border border-hairline bg-paper pl-10 pr-4 text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink-3 focus:border-brand focus:bg-surface";
+
+const iconClass =
+  "pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-ink-3";
 
 export default function AuthForm({ mode }) {
   const [form, setForm] = useState({
@@ -44,184 +59,205 @@ export default function AuthForm({ mode }) {
 
       router.replace("/dashboard");
     } catch (err) {
-      setError(err.message || "An unexpected error occurred. Please try again.");
+      setError(err.message || "Something went wrong. Try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 bg-grid-slate">
-      {/* Background radial glow */}
-      <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-96 w-[600px] rounded-full bg-gradient-to-tr from-cyan-400/20 via-blue-500/20 to-indigo-500/20 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-10 left-10 h-72 w-72 rounded-full bg-blue-400/10 blur-3xl" />
+    <main className="flex min-h-screen flex-col bg-paper">
+      <div className="mx-auto w-full max-w-md px-4 py-6 sm:px-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm text-ink-2 transition-colors duration-150 hover:text-ink"
+        >
+          <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+          Back to home
+        </Link>
+      </div>
 
-      <div className="relative w-full max-w-md">
-        {/* Top return link */}
-        <div className="mb-6 flex items-center justify-between">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-blue-600"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Home</span>
-          </Link>
-
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50/80 px-3 py-1 text-xs font-semibold text-blue-700">
-            <ReactLogo className="h-3.5 w-3.5 text-cyan-500" animated={true} />
-            React 19
-          </span>
-        </div>
-
-        {/* Card */}
-        <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white/90 p-8 shadow-2xl shadow-slate-200/50 backdrop-blur-xl sm:p-10">
-          <div className="flex flex-col items-center text-center">
+      <div className="flex flex-1 items-start justify-center px-4 pb-16 pt-2 sm:px-6 sm:pt-6">
+        <div className="w-full max-w-md">
+          <div className="rounded-2xl border border-hairline bg-surface p-6 sm:p-8">
             <BrandLogo href="/" size="md" />
 
-            <h1 className="mt-6 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
-              {isRegister ? "Create your account" : "Welcome back"}
+            <h1 className="mt-6 text-2xl font-medium tracking-[-0.01em] text-ink">
+              {isRegister ? "Create an account" : "Sign in"}
             </h1>
-
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            <p className="mt-1.5 text-sm text-ink-2">
               {isRegister
-                ? "Sign up to host instant meetings and save room history"
-                : "Sign in to access your meetings, history, and settings"}
+                ? "Host meetings and keep a history of your rooms."
+                : "Access your meetings, history and settings."}
             </p>
-          </div>
 
-          <form onSubmit={submit} className="mt-8 space-y-4">
-            {isRegister && (
+            <form onSubmit={submit} className="mt-6 space-y-4">
+              {isRegister && (
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="mb-1.5 block text-[13px] font-medium text-ink"
+                  >
+                    Full name
+                  </label>
+                  <div className="relative">
+                    <div className={iconClass}>
+                      <User className="h-4 w-4" strokeWidth={1.75} />
+                    </div>
+                    <input
+                      id="name"
+                      required
+                      type="text"
+                      autoComplete="name"
+                      placeholder="Jane Doe"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      className={fieldClass}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Full Name
+                <label
+                  htmlFor="email"
+                  className="mb-1.5 block text-[13px] font-medium text-ink"
+                >
+                  Email
                 </label>
                 <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                    <User className="h-4 w-4" />
+                  <div className={iconClass}>
+                    <Mail className="h-4 w-4" strokeWidth={1.75} />
                   </div>
                   <input
+                    id="email"
                     required
-                    type="text"
-                    placeholder="Jane Doe"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="h-12 w-full rounded-xl border border-slate-300/80 bg-slate-50/50 pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@company.com"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className={fieldClass}
                   />
                 </div>
               </div>
-            )}
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <Mail className="h-4 w-4" />
-                </div>
-                <input
-                  required
-                  type="email"
-                  placeholder="you@company.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="h-12 w-full rounded-xl border border-slate-300/80 bg-slate-50/50 pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                  <Lock className="h-4 w-4" />
-                </div>
-                <input
-                  required
-                  minLength={8}
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  className="h-12 w-full rounded-xl border border-slate-300/80 bg-slate-50/50 pl-10 pr-11 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            {isRegister && (
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Confirm Password
+                <label
+                  htmlFor="password"
+                  className="mb-1.5 block text-[13px] font-medium text-ink"
+                >
+                  Password
                 </label>
                 <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                    <Lock className="h-4 w-4" />
+                  <div className={iconClass}>
+                    <Lock className="h-4 w-4" strokeWidth={1.75} />
                   </div>
                   <input
+                    id="password"
                     required
                     minLength={8}
                     type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={form.confirm}
-                    onChange={(e) => setForm({ ...form, confirm: e.target.value })}
-                    className="h-12 w-full rounded-xl border border-slate-300/80 bg-slate-50/50 pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                    autoComplete={isRegister ? "new-password" : "current-password"}
+                    placeholder={isRegister ? "At least 8 characters" : "Your password"}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    className={`${fieldClass} pr-11`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-ink-3 transition-colors duration-150 hover:text-ink"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" strokeWidth={1.75} />
+                    ) : (
+                      <Eye className="h-4 w-4" strokeWidth={1.75} />
+                    )}
+                  </button>
                 </div>
               </div>
-            )}
 
-            {error && (
-              <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-600">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
+              {isRegister && (
+                <div>
+                  <label
+                    htmlFor="confirm"
+                    className="mb-1.5 block text-[13px] font-medium text-ink"
+                  >
+                    Confirm password
+                  </label>
+                  <div className="relative">
+                    <div className={iconClass}>
+                      <Lock className="h-4 w-4" strokeWidth={1.75} />
+                    </div>
+                    <input
+                      id="confirm"
+                      required
+                      minLength={8}
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      placeholder="Repeat the password"
+                      value={form.confirm}
+                      onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+                      className={fieldClass}
+                    />
+                  </div>
+                </div>
+              )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 font-bold text-white shadow-lg shadow-blue-500/25 transition-all duration-200 hover:scale-[1.01] hover:shadow-xl hover:shadow-blue-500/35 active:scale-[0.98] disabled:opacity-60"
-            >
-              {loading ? (
+              {error && (
+                <div className="flex items-start gap-2 rounded-lg border border-negative/25 bg-negative/5 p-3 text-[13px] text-negative">
+                  <AlertCircle
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                    strokeWidth={1.75}
+                  />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-brand text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />
+                    <span>Please wait</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{isRegister ? "Create account" : "Sign in"}</span>
+                    <ArrowRight className="h-4 w-4" strokeWidth={1.75} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <p className="mt-6 border-t border-hairline pt-5 text-sm text-ink-2">
+              {isRegister ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-white" />
-                  <span>Please wait…</span>
+                  Already have an account?{" "}
+                  <Link
+                    href="/login"
+                    className="font-medium text-brand transition-colors duration-150 hover:text-brand-hover"
+                  >
+                    Sign in
+                  </Link>
                 </>
               ) : (
                 <>
-                  <span>{isRegister ? "Create Account" : "Sign In"}</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  No account yet?{" "}
+                  <Link
+                    href="/register"
+                    className="font-medium text-brand transition-colors duration-150 hover:text-brand-hover"
+                  >
+                    Create one
+                  </Link>
                 </>
               )}
-            </button>
-          </form>
-
-          {/* Toggle link */}
-          <div className="mt-8 border-t border-slate-100 pt-6 text-center text-sm text-slate-500">
-            {isRegister ? (
-              <p>
-                Already have an account?{" "}
-                <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-700">
-                  Sign in
-                </Link>
-              </p>
-            ) : (
-              <p>
-                Don't have an account yet?{" "}
-                <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-700">
-                  Create one free
-                </Link>
-              </p>
-            )}
+            </p>
           </div>
         </div>
       </div>

@@ -7,7 +7,7 @@ const STATUS_LABELS = {
   idle: { label: "Disabled", color: "bg-slate-500" },
   connecting: { label: "Connecting", color: "bg-amber-400 animate-pulse" },
   connected: { label: "Connected", color: "bg-emerald-400" },
-  translating: { label: "Translating", color: "bg-cyan-400 animate-pulse" },
+  translating: { label: "Translating", color: "bg-brand-soft" },
   error: { label: "Error", color: "bg-red-400" },
 };
 
@@ -74,7 +74,7 @@ export default function TranslationPanel({
       <div className="space-y-1.5">
         <label
           htmlFor="translation-language"
-          className="text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+          className="text-xs font-medium text-night-ink-3"
         >
           Preferred Listening Language
         </label>

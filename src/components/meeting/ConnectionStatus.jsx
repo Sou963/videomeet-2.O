@@ -17,9 +17,9 @@ export default function ConnectionStatus({ status = "connected" }) {
       <span
         className={`h-2 w-2 rounded-full ${
           isConnected
-            ? "bg-[#22C55E] shadow-[0_0_8px_rgba(34,197,94,0.6)]"
+            ? "bg-[#22C55E]"
             : isFailed
-            ? "bg-[#EF4444] shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+            ? "bg-[#EF4444]"
             : "bg-amber-400 animate-pulse"
         }`}
       />

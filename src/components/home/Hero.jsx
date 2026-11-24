@@ -2,258 +2,210 @@
 
 import Link from "next/link";
 import {
-  Video,
   ArrowRight,
-  ShieldCheck,
-  Zap,
   Mic,
-  Camera,
-  Monitor,
+  MicOff,
+  Video,
+  MonitorUp,
+  MessageSquare,
   PhoneOff,
-  Smile,
-  Sparkles,
-  Layers,
-  Activity,
+  Languages,
 } from "lucide-react";
-import ReactLogo from "../common/ReactLogo";
+
+const facts = [
+  { label: "Runs in the browser", value: "No install" },
+  { label: "Media path", value: "Peer to peer" },
+  { label: "Translation", value: "bn ↔ en" },
+];
+
+const tiles = [
+  { initial: "S", name: "Sourav", role: "Host", muted: false, accent: true },
+  { initial: "E", name: "Elena", role: "Design", muted: false, accent: false },
+  { initial: "R", name: "Rahim", role: "Engineering", muted: true, accent: false },
+  { initial: "K", name: "Karim", role: "Product", muted: false, accent: false },
+];
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-slate-50/80 via-white to-slate-50/50 pt-32 pb-20 lg:pt-40 lg:pb-32 bg-grid-slate">
-      {/* Background Radial Glow */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 h-[550px] w-[900px] rounded-full bg-gradient-to-tr from-cyan-400/15 via-blue-500/15 to-indigo-500/15 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/3 -left-48 h-96 w-96 rounded-full bg-blue-400/10 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/2 -right-48 h-96 w-96 rounded-full bg-cyan-400/10 blur-3xl" />
-
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid items-center gap-14 lg:grid-cols-12">
-          {/* ================= LEFT CONTENT ================= */}
-          <div className="lg:col-span-6 lg:max-w-xl">
-            {/* React Tech Pill */}
-            <div className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-cyan-400/40 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-indigo-500/10 px-4 py-2 text-sm font-semibold text-slate-800 shadow-xs backdrop-blur-md">
-              <ReactLogo className="h-5 w-5 text-cyan-600 drop-shadow-[0_0_6px_rgba(0,216,254,0.4)]" />
-              <span className="flex items-center gap-1.5">
-                Powered by <strong className="font-bold text-blue-700">React 19</strong> &amp; WebRTC
-              </span>
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            </div>
-
-            {/* Main Headline */}
-            <h1 className="text-4xl font-black tracking-tight text-slate-900 sm:text-5xl lg:text-6xl lg:leading-[1.12]">
-              Next-Gen Meetings.{" "}
-              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 bg-clip-text text-transparent">
-                Unmatched Clarity.
-              </span>
-            </h1>
-
-            {/* Description */}
-            <p className="mt-6 text-lg leading-relaxed text-slate-600">
-              VideoMeet delivers ultra-low latency, peer-to-peer HD video, and real-time AI voice translation. Built on modern React architecture for silky-smooth collaboration.
+    <section className="border-b border-hairline bg-paper">
+      <div className="mx-auto max-w-6xl px-4 pb-14 pt-28 sm:px-6 sm:pb-20 sm:pt-32 lg:px-8 lg:pt-36">
+        <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-14">
+          <div className="lg:col-span-6">
+            <p
+              className="rise-in font-mono text-xs tracking-[0.02em] text-ink-3"
+              style={{ "--delay": "40ms" }}
+            >
+              Browser meetings · live voice translation
             </p>
 
-            {/* CTA Buttons */}
-            <div className="mt-8 flex flex-col gap-3.5 sm:flex-row">
+            <h1
+              className="rise-in mt-4 text-[36px] font-medium leading-[1.08] tracking-[-0.02em] text-ink sm:text-[44px] lg:text-[56px]"
+              style={{ "--delay": "110ms" }}
+            >
+              Meetings that translate while you speak
+            </h1>
+
+            <p
+              className="rise-in mt-5 max-w-[34rem] text-base leading-[1.6] text-ink-2 sm:text-[17px]"
+              style={{ "--delay": "190ms" }}
+            >
+              Peer-to-peer video for small teams, with live Bengali and English
+              voice translation inside the call. Guests join from a link with no
+              account and no download.
+            </p>
+
+            <div
+              className="rise-in mt-8 flex flex-col gap-2.5 sm:flex-row sm:items-center"
+              style={{ "--delay": "270ms" }}
+            >
               <Link
                 href="/dashboard"
-                className="group flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 px-7 py-4 text-base font-bold text-white shadow-lg shadow-blue-600/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-blue-600/40 active:scale-[0.98]"
+                className="group inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand px-5 text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-hover"
               >
-                <Video className="h-5 w-5 text-cyan-300" />
-                <span>Start Free Meeting</span>
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                Start a meeting
+                <ArrowRight
+                  className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                  strokeWidth={1.75}
+                />
               </Link>
-
               <Link
                 href="/join"
-                className="group flex items-center justify-center gap-2 rounded-2xl border border-slate-300/80 bg-white/90 px-7 py-4 text-base font-bold text-slate-700 shadow-xs backdrop-blur-md transition-all duration-300 hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-600 active:scale-[0.98]"
+                className="inline-flex h-11 items-center justify-center rounded-lg border border-hairline bg-surface px-5 text-sm font-medium text-ink transition-colors duration-150 hover:bg-raised"
               >
-                <span>Join with Code</span>
+                Join with a code
               </Link>
             </div>
 
-            {/* Feature highlights */}
-            <div className="mt-10 grid grid-cols-3 gap-3 border-t border-slate-200/80 pt-6">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                  <Zap className="h-4 w-4" />
+            <dl
+              className="rise-in mt-10 grid grid-cols-3 gap-4 border-t border-hairline pt-6"
+              style={{ "--delay": "350ms" }}
+            >
+              {facts.map((fact) => (
+                <div key={fact.label}>
+                  <dt className="text-xs text-ink-3">{fact.label}</dt>
+                  <dd className="tnum mt-1 font-mono text-[13px] text-ink">
+                    {fact.value}
+                  </dd>
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Ultra Fast</p>
-                  <p className="text-[11px] text-slate-500">&lt;35ms latency</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
-                  <ShieldCheck className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">End-to-End</p>
-                  <p className="text-[11px] text-slate-500">P2P encrypted</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-100 text-cyan-600">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">AI Voice</p>
-                  <p className="text-[11px] text-slate-500">Live speech</p>
-                </div>
-              </div>
-            </div>
+              ))}
+            </dl>
           </div>
 
-          {/* ================= RIGHT UI SHOWCASE ================= */}
-          <div className="lg:col-span-6">
-            <div className="relative mx-auto max-w-xl">
-              {/* Outer decorative glow */}
-              <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600 opacity-20 blur-xl" />
-
-              {/* Main Video Meeting Mockup Card */}
-              <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 p-3.5 shadow-2xl shadow-slate-950/40">
-                {/* Header bar */}
-                <div className="flex items-center justify-between border-b border-slate-800/80 px-3 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600">
-                      <ReactLogo className="h-5 w-5 text-cyan-200" animated={true} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">VideoMeet Room</p>
-                      <p className="text-[10px] text-slate-400">Design Sprint #42</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Live • 1080p
-                    </span>
-                  </div>
+          {/* Product view: the room as it actually looks. */}
+          <div
+            className="rise-in lg:col-span-6"
+            style={{ "--delay": "160ms" }}
+          >
+            <div className="overflow-hidden rounded-2xl border border-hairline bg-surface shadow-[0_8px_24px_rgba(17,24,39,0.06)]">
+              <div className="flex items-center justify-between gap-4 border-b border-hairline px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-ink">
+                    Design sprint 42
+                  </p>
+                  <p className="tnum truncate font-mono text-[11px] text-ink-3">
+                    meet-894-abc · 12:04
+                  </p>
                 </div>
-
-                {/* Video Grid Tiles */}
-                <div className="mt-3 grid grid-cols-2 gap-2.5">
-                  {/* Tile 1: Sourav (Speaker) */}
-                  <div className="relative flex aspect-video flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950 p-3 border border-blue-500/40 shadow-inner">
-                    <div className="flex justify-between items-start">
-                      <span className="rounded-md bg-blue-600/80 px-2 py-0.5 text-[10px] font-semibold text-white">
-                        Host
-                      </span>
-                      {/* Audio visualizer dots */}
-                      <div className="flex items-end gap-1 h-3">
-                        <span className="w-1 bg-cyan-400 rounded-full animate-pulse h-2" />
-                        <span className="w-1 bg-cyan-400 rounded-full animate-pulse h-3" />
-                        <span className="w-1 bg-cyan-400 rounded-full animate-pulse h-1" />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-center my-auto">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-xl font-bold text-white shadow-lg shadow-blue-500/30">
-                        S
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-lg bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-xs">
-                        Sourav (You)
-                      </span>
-                      <Mic className="h-3.5 w-3.5 text-cyan-400" />
-                    </div>
-                  </div>
-
-                  {/* Tile 2: Elena */}
-                  <div className="relative flex aspect-video flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 p-3 border border-slate-800">
-                    <span className="self-end rounded-md bg-black/40 px-1.5 py-0.5 text-[9px] text-slate-400">
-                      React Team
-                    </span>
-
-                    <div className="flex items-center justify-center my-auto">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-500 text-xl font-bold text-white shadow-lg">
-                        E
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-lg bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-xs">
-                        Elena Vance
-                      </span>
-                      <Mic className="h-3.5 w-3.5 text-slate-400" />
-                    </div>
-                  </div>
-
-                  {/* Tile 3: Rahim */}
-                  <div className="relative flex aspect-video flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-purple-950 p-3 border border-slate-800">
-                    <div />
-                    <div className="flex items-center justify-center my-auto">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 text-xl font-bold text-white shadow-lg">
-                        R
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-lg bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-xs">
-                        Rahim Khan
-                      </span>
-                      <Mic className="h-3.5 w-3.5 text-cyan-400" />
-                    </div>
-                  </div>
-
-                  {/* Tile 4: Karim */}
-                  <div className="relative flex aspect-video flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-3 border border-slate-800">
-                    <div />
-                    <div className="flex items-center justify-center my-auto">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-xl font-bold text-white shadow-lg">
-                        K
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-lg bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-xs">
-                        Karim Ahmed
-                      </span>
-                      <Mic className="h-3.5 w-3.5 text-slate-400" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sleek Floating Dock Controls */}
-                <div className="mt-3 flex items-center justify-center gap-2.5 rounded-2xl border border-slate-800 bg-slate-900/90 py-2.5 px-4 backdrop-blur-md">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-white transition hover:bg-slate-700">
-                    <Mic className="h-4 w-4 text-cyan-400" />
-                  </div>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-white transition hover:bg-slate-700">
-                    <Camera className="h-4 w-4 text-cyan-400" />
-                  </div>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-white transition hover:bg-slate-700">
-                    <Monitor className="h-4 w-4 text-slate-300" />
-                  </div>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-white transition hover:bg-slate-700">
-                    <Smile className="h-4 w-4 text-yellow-400" />
-                  </div>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm shadow-red-600/40">
-                    <PhoneOff className="h-4 w-4" />
-                  </div>
-                </div>
+                <span className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] text-ink-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-positive" />
+                  Live
+                </span>
               </div>
 
-              {/* Floating Pill: React 19 State */}
-              <div className="absolute -bottom-5 -left-4 hidden rounded-2xl border border-slate-200 bg-white/95 p-3.5 shadow-xl backdrop-blur-xl sm:flex sm:items-center sm:gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50">
-                  <ReactLogo className="h-6 w-6 text-cyan-600" animated={true} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">React 19 Reactive Grid</p>
-                  <p className="text-[11px] text-slate-500">Real-time state &amp; WebRTC mesh</p>
-                </div>
+              <div className="grid grid-cols-2 gap-2 p-3">
+                {tiles.map((tile) => (
+                  <div
+                    key={tile.name}
+                    className={`relative flex aspect-[4/3] flex-col justify-between rounded-lg p-3 ${
+                      tile.accent
+                        ? "bg-night-surface"
+                        : "bg-raised"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span
+                        className={`font-mono text-[10px] ${
+                          tile.accent ? "text-night-ink-3" : "text-ink-3"
+                        }`}
+                      >
+                        {tile.role}
+                      </span>
+                      {tile.muted ? (
+                        <MicOff
+                          className={`h-3.5 w-3.5 ${
+                            tile.accent ? "text-night-ink-3" : "text-ink-3"
+                          }`}
+                          strokeWidth={1.75}
+                        />
+                      ) : (
+                        <Mic
+                          className={`h-3.5 w-3.5 ${
+                            tile.accent ? "text-night-ink-2" : "text-ink-3"
+                          }`}
+                          strokeWidth={1.75}
+                        />
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-center">
+                      <span
+                        className={`flex h-11 w-11 items-center justify-center rounded-lg text-sm font-medium ${
+                          tile.accent
+                            ? "bg-brand text-white"
+                            : "bg-surface text-ink-2"
+                        }`}
+                      >
+                        {tile.initial}
+                      </span>
+                    </div>
+
+                    <div className="flex items-end justify-between gap-2">
+                      <p
+                        className={`truncate text-xs ${
+                          tile.accent ? "text-night-ink" : "text-ink"
+                        }`}
+                      >
+                        {tile.name}
+                      </p>
+                      {tile.accent ? (
+                        <span className="flex h-3 items-end gap-[2px]" aria-hidden="true">
+                          <i
+                            className="level block w-[2px] rounded-full bg-brand"
+                            style={{ height: "6px", "--delay": "0ms" }}
+                          />
+                          <i
+                            className="level block w-[2px] rounded-full bg-brand"
+                            style={{ height: "12px", "--delay": "180ms" }}
+                          />
+                          <i
+                            className="level block w-[2px] rounded-full bg-brand"
+                            style={{ height: "8px", "--delay": "320ms" }}
+                          />
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              {/* Floating Pill: AI Voice Translation */}
-              <div className="absolute -top-5 -right-4 hidden rounded-2xl border border-slate-200 bg-white/95 p-3.5 shadow-xl backdrop-blur-xl sm:flex sm:items-center sm:gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                  <Activity className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">AI Voice Translation</p>
-                  <p className="text-[11px] text-slate-500">Live multi-lingual audio</p>
+              <div className="flex items-center justify-between gap-3 border-t border-hairline px-4 py-3">
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-hairline px-2 py-1 font-mono text-[11px] text-ink-2">
+                  <Languages className="h-3.5 w-3.5 text-ink-3" strokeWidth={1.75} />
+                  en → bn
+                </span>
+
+                <div className="flex items-center gap-1.5">
+                  {[Mic, Video, MonitorUp, MessageSquare].map((Icon, index) => (
+                    <span
+                      key={index}
+                      className="flex h-8 w-8 items-center justify-center rounded-md bg-raised text-ink-2"
+                    >
+                      <Icon className="h-4 w-4" strokeWidth={1.75} />
+                    </span>
+                  ))}
+                  <span className="flex h-8 w-8 items-center justify-center rounded-md bg-negative text-white">
+                    <PhoneOff className="h-4 w-4" strokeWidth={1.75} />
+                  </span>
                 </div>
               </div>
             </div>

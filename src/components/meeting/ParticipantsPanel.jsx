@@ -34,7 +34,7 @@ export default function ParticipantsPanel({
         {/* Local user tile */}
         <div className="flex items-center justify-between rounded-2xl border border-slate-800/80 bg-[#1A2437] p-3 transition">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-[#6366F1] to-[#38BDF8] text-xs font-bold text-white shadow-xs">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-night-raised text-xs font-medium text-night-ink">
               {localName?.[0]?.toUpperCase() || "Y"}
             </div>
             <div>

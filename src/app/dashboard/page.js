@@ -6,8 +6,6 @@ import Link from "next/link";
 import {
   Video,
   Plus,
-  Link2,
-  Calendar,
   Lock,
   LogOut,
   Settings,
@@ -15,9 +13,7 @@ import {
   Copy,
   Check,
   ArrowRight,
-  Shield,
   Clock,
-  Sparkles,
   Users,
   AlertCircle,
   Trash2,
@@ -26,7 +22,26 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import BrandLogo from "@/components/common/BrandLogo";
-import ReactLogo from "@/components/common/ReactLogo";
+
+const labelClass = "mb-1.5 block text-[13px] font-medium text-ink";
+const fieldClass =
+  "h-11 w-full rounded-lg border border-hairline bg-paper px-3.5 text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink-3 focus:border-brand focus:bg-surface";
+const iconFieldClass = `${fieldClass} pl-10`;
+
+function StatusDot({ status }) {
+  const live = status === "live" || status === "active";
+  const ended = status === "ended";
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 font-mono text-[11px] text-ink-3">
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          ended ? "bg-ink-3" : live ? "bg-positive" : "bg-ink-3"
+        }`}
+      />
+      {status || "ready"}
+    </span>
+  );
+}
 
 export default function Dashboard() {
   const router = useRouter();
@@ -70,7 +85,7 @@ export default function Dashboard() {
 
       router.push(`/meeting/${meeting.meetingId}`);
     } catch (err) {
-      setError(err.message || "Failed to create meeting.");
+      setError(err.message || "Could not create the meeting. Try again.");
     } finally {
       setLoading(false);
     }
@@ -99,7 +114,10 @@ export default function Dashboard() {
   }
 
   async function toggleMeetingStatus(meetingId, currentStatus) {
-    const newStatus = currentStatus === "active" || currentStatus === "live" ? "inactive" : "active";
+    const newStatus =
+      currentStatus === "active" || currentStatus === "live"
+        ? "inactive"
+        : "active";
     try {
       await api(`/meetings/${meetingId}/status`, {
         method: "PATCH",
@@ -111,205 +129,191 @@ export default function Dashboard() {
         )
       );
     } catch (err) {
-      setError(err.message || "Failed to update meeting status.");
+      setError(err.message || "Could not update the meeting status.");
     }
   }
 
   async function deleteMeeting(meetingId) {
-    if (!confirm("Are you sure you want to delete this meeting?")) return;
+    if (!confirm("Delete this meeting?")) return;
     try {
       await api(`/meetings/${meetingId}`, { method: "DELETE" });
       setMeetings((prev) => prev.filter((m) => m.meetingId !== meetingId));
     } catch (err) {
-      setError(err.message || "Failed to delete meeting.");
+      setError(err.message || "Could not delete the meeting.");
     }
   }
 
   const userInitial = user?.name ? user.name[0].toUpperCase() : "U";
 
   return (
-    <div className="min-h-screen bg-slate-50/70 bg-grid-slate flex flex-col">
-      {/* Top Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen flex-col bg-paper">
+      <header className="sticky top-0 z-40 border-b border-hairline bg-surface/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <BrandLogo href="/" size="md" />
 
-          {/* Navigation Links & User Pill */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             <Link
               href="/history"
-              className="hidden sm:flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+              aria-label="Meeting history"
+              className="flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm text-ink-2 transition-colors duration-150 hover:bg-raised hover:text-ink"
             >
-              <History className="h-4 w-4" />
-              <span>History</span>
+              <History className="h-4 w-4" strokeWidth={1.75} />
+              <span className="hidden sm:inline">History</span>
             </Link>
 
             <Link
               href="/settings"
-              className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+              aria-label="Settings"
+              className="flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm text-ink-2 transition-colors duration-150 hover:bg-raised hover:text-ink"
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="h-4 w-4" strokeWidth={1.75} />
               <span className="hidden sm:inline">Settings</span>
             </Link>
 
             <button
+              type="button"
               onClick={logout}
-              className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+              aria-label="Log out"
+              className="flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm text-ink-2 transition-colors duration-150 hover:bg-raised hover:text-ink"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4" strokeWidth={1.75} />
               <span className="hidden sm:inline">Log out</span>
             </button>
 
-            {/* User Avatar */}
-            <div className="ml-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-md shadow-blue-500/20">
+            <div className="ml-1 flex h-9 w-9 items-center justify-center rounded-lg bg-raised text-[13px] font-medium text-ink">
               {userInitial}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl w-full flex-1 px-4 py-8 sm:px-6 lg:px-8">
-        {/* Welcome Section */}
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50/80 px-3 py-1 text-xs font-semibold text-blue-700">
-              <ReactLogo className="h-3.5 w-3.5 text-cyan-600" animated={true} />
-              <span>Interactive Dashboard</span>
-            </div>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-              Welcome back, {user ? user.name : "there"}! 👋
-            </h1>
-            <p className="mt-1 text-sm text-slate-600">
-              Start an instant room, schedule a future meeting, or join an active session.
-            </p>
-          </div>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h1 className="text-[28px] font-medium leading-[1.15] tracking-[-0.02em] text-ink">
+            Your meetings
+          </h1>
+          <p className="tnum font-mono text-xs text-ink-3">
+            {user ? `Signed in as ${user.name}` : "Loading"} · {meetings.length} rooms
+          </p>
         </div>
 
         {error && (
-          <div className="mt-6 flex items-center gap-2.5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-            <AlertCircle className="h-5 w-5 shrink-0" />
+          <div className="mt-6 flex items-start gap-2 rounded-lg border border-negative/25 bg-negative/5 p-3 text-[13px] text-negative">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.75} />
             <span>{error}</span>
           </div>
         )}
 
-        {/* Primary Action Cards */}
-        <div className="mt-8 grid gap-6 lg:grid-cols-12">
-          {/* Card 1: Create Meeting (7 cols) */}
-          <div className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl sm:p-8 lg:col-span-7">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
-                  <Video className="h-6 w-6 text-cyan-200" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight text-slate-900">
-                    Host a New Meeting
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Create an instant room or schedule for later
-                  </p>
-                </div>
+        <div className="mt-6 grid gap-4 lg:grid-cols-12">
+          <div className="rounded-xl border border-hairline bg-surface p-5 sm:p-6 lg:col-span-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-[15px] font-medium text-ink">Host a meeting</h2>
+                <p className="mt-0.5 text-[13px] text-ink-2">
+                  Start a room now or schedule it for later
+                </p>
               </div>
-
-              <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Instant Ready
-              </span>
+              <Video className="h-[18px] w-[18px] shrink-0 text-ink-3" strokeWidth={1.5} />
             </div>
 
-            <form onSubmit={createMeeting} className="mt-6 space-y-4">
+            <form onSubmit={createMeeting} className="mt-5 space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Meeting Title
+                <label htmlFor="meeting-title" className={labelClass}>
+                  Meeting title
                 </label>
                 <input
+                  id="meeting-title"
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Weekly Product Sync"
-                  className="h-12 w-full rounded-2xl border border-slate-300/80 bg-slate-50/50 px-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                  placeholder="Weekly product sync"
+                  className={fieldClass}
                 />
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Room Password (Optional)
+                  <label htmlFor="meeting-password" className={labelClass}>
+                    Room password
+                    <span className="ml-1 font-normal text-ink-3">optional</span>
                   </label>
                   <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                      <Lock className="h-4 w-4" />
-                    </div>
+                    <Lock
+                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"
+                      strokeWidth={1.75}
+                    />
                     <input
+                      id="meeting-password"
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Optional password"
-                      className="h-12 w-full rounded-2xl border border-slate-300/80 bg-slate-50/50 pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                      placeholder="None"
+                      className={iconFieldClass}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Schedule Time (Optional)
+                  <label htmlFor="meeting-schedule" className={labelClass}>
+                    Schedule
+                    <span className="ml-1 font-normal text-ink-3">optional</span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type="datetime-local"
-                      value={scheduledAt}
-                      onChange={(e) => setScheduledAt(e.target.value)}
-                      className="h-12 w-full rounded-2xl border border-slate-300/80 bg-slate-50/50 px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
-                    />
-                  </div>
+                  <input
+                    id="meeting-schedule"
+                    type="datetime-local"
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    className={fieldClass}
+                  />
                 </div>
-              </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Time Limit
+                  <label htmlFor="meeting-limit" className={labelClass}>
+                    Time limit
                   </label>
                   <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                      <Timer className="h-4 w-4" />
-                    </div>
+                    <Timer
+                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"
+                      strokeWidth={1.75}
+                    />
                     <select
+                      id="meeting-limit"
                       value={timeLimit}
                       onChange={(e) => setTimeLimit(Number(e.target.value))}
-                      className="h-12 w-full rounded-2xl border border-slate-300/80 bg-slate-50/50 pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 appearance-none"
+                      className={`${iconFieldClass} appearance-none`}
                     >
-                      <option value={0}>No Limit</option>
-                      <option value={15}>15 Minutes</option>
-                      <option value={30}>30 Minutes</option>
-                      <option value={45}>45 Minutes</option>
-                      <option value={60}>1 Hour</option>
-                      <option value={120}>2 Hours</option>
+                      <option value={0}>No limit</option>
+                      <option value={15}>15 minutes</option>
+                      <option value={30}>30 minutes</option>
+                      <option value={45}>45 minutes</option>
+                      <option value={60}>1 hour</option>
+                      <option value={120}>2 hours</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Max Participants
+                  <label htmlFor="meeting-cap" className={labelClass}>
+                    Max participants
                   </label>
                   <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                      <Users className="h-4 w-4" />
-                    </div>
+                    <Users
+                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"
+                      strokeWidth={1.75}
+                    />
                     <select
+                      id="meeting-cap"
                       value={maxParticipants}
                       onChange={(e) => setMaxParticipants(Number(e.target.value))}
-                      className="h-12 w-full rounded-2xl border border-slate-300/80 bg-slate-50/50 pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 appearance-none"
+                      className={`${iconFieldClass} appearance-none`}
                     >
-                      <option value={0}>No Limit</option>
-                      <option value={2}>2 People</option>
-                      <option value={5}>5 People</option>
-                      <option value={10}>10 People</option>
-                      <option value={25}>25 People</option>
-                      <option value={50}>50 People</option>
+                      <option value={0}>No limit</option>
+                      <option value={2}>2 people</option>
+                      <option value={5}>5 people</option>
+                      <option value={10}>10 people</option>
+                      <option value={25}>25 people</option>
+                      <option value={50}>50 people</option>
                     </select>
                   </div>
                 </div>
@@ -318,87 +322,71 @@ export default function Dashboard() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group mt-2 flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 font-bold text-white shadow-lg shadow-blue-500/25 transition-all duration-200 hover:scale-[1.01] hover:shadow-xl hover:shadow-blue-500/35 active:scale-[0.98] disabled:opacity-60"
+                className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-brand text-sm font-medium text-white transition-colors duration-150 hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <Plus className="h-5 w-5 text-cyan-300" />
-                <span>{loading ? "Preparing room…" : "Launch Meeting Room"}</span>
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <Plus className="h-4 w-4" strokeWidth={1.75} />
+                <span>{loading ? "Preparing room" : "Start meeting"}</span>
               </button>
             </form>
           </div>
 
-          {/* Card 2: Join Meeting with ID (5 cols) */}
-          <div className="flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl sm:p-8 lg:col-span-5">
+          <div className="flex flex-col justify-between rounded-xl border border-hairline bg-surface p-5 sm:p-6 lg:col-span-5">
             <div>
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600 shadow-xs">
-                  <Link2 className="h-6 w-6" />
-                </div>
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold tracking-tight text-slate-900">
-                    Join with Code
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Jump into someone else's room
+                  <h2 className="text-[15px] font-medium text-ink">Join a meeting</h2>
+                  <p className="mt-0.5 text-[13px] text-ink-2">
+                    Enter a code or an invite link
                   </p>
                 </div>
+                <ArrowRight className="h-[18px] w-[18px] shrink-0 text-ink-3" strokeWidth={1.5} />
               </div>
 
-              <form onSubmit={handleQuickJoin} className="mt-6 space-y-4">
+              <form onSubmit={handleQuickJoin} className="mt-5 space-y-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Meeting ID or Link
+                  <label htmlFor="join-code" className={labelClass}>
+                    Meeting ID or link
                   </label>
                   <input
+                    id="join-code"
                     type="text"
+                    spellCheck={false}
                     value={joinCode}
                     onChange={(e) => setJoinCode(e.target.value)}
-                    placeholder="e.g. room-749-xyz"
-                    className="h-12 w-full rounded-2xl border border-slate-300/80 bg-slate-50/50 px-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                    placeholder="meet-894-abc"
+                    className={`${fieldClass} font-mono text-[13px]`}
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white font-bold text-slate-800 shadow-xs transition hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-600 active:scale-[0.98]"
+                  className="flex h-11 w-full items-center justify-center rounded-lg border border-hairline bg-surface text-sm font-medium text-ink transition-colors duration-150 hover:bg-raised"
                 >
-                  <span>Enter Room</span>
-                  <ArrowRight className="h-4 w-4" />
+                  Enter room
                 </button>
               </form>
             </div>
 
-            {/* Info badge */}
-            <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <Shield className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span>You can test your camera &amp; mic in the waiting room.</span>
-              </div>
-            </div>
+            <p className="mt-6 border-t border-hairline pt-4 text-[13px] leading-[1.6] text-ink-3">
+              You can test the camera and microphone before entering the room.
+            </p>
           </div>
         </div>
 
-        {/* Recent & Upcoming Meetings List */}
-        <div className="mt-12">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                Recent &amp; Scheduled Meetings
-              </h2>
-              <p className="text-xs text-slate-500">
-                Quick access to your created video rooms
-              </p>
-            </div>
-
+        <div className="mt-10">
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 className="text-[15px] font-medium text-ink">
+              Recent and scheduled
+            </h2>
             <Link
               href="/history"
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline"
+              className="text-[13px] text-brand transition-colors duration-150 hover:text-brand-hover"
             >
-              View Full History →
+              Full history
             </Link>
           </div>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-3 space-y-2">
             {meetings.length > 0 ? (
               meetings.map((m) => {
                 const isScheduled = !!m.scheduledAt;
@@ -409,145 +397,116 @@ export default function Dashboard() {
                 return (
                   <div
                     key={m._id}
-                    className="group flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs transition-all duration-200 hover:border-blue-300 hover:shadow-md sm:flex-row sm:items-center"
+                    className="rounded-xl border border-hairline bg-surface p-4 sm:p-5"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition group-hover:bg-blue-600 group-hover:text-white">
-                        <Video className="h-5 w-5" />
-                      </div>
-
-                      <div>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-slate-900 text-base">
-                            {m.title || "Untitled Meeting"}
+                          <h3 className="truncate text-[15px] font-medium text-ink">
+                            {m.title || "Untitled meeting"}
                           </h3>
-                          <span
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                              m.status === "live"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            {m.status || "ready"}
-                          </span>
+                          <StatusDot status={m.status} />
                         </div>
 
-                        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                          <span className="font-mono text-slate-700">{m.meetingId}</span>
-                          <span>•</span>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-3">
+                          <span className="tnum font-mono">{m.meetingId}</span>
                           <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
+                            <Clock className="h-3 w-3" strokeWidth={1.75} />
                             {dateStr}
                           </span>
                           {m.hasPassword && (
-                            <>
-                              <span>•</span>
-                              <span className="flex items-center gap-1 text-amber-600">
-                                <Lock className="h-3 w-3" />
-                                Protected
-                              </span>
-                            </>
+                            <span className="flex items-center gap-1">
+                              <Lock className="h-3 w-3" strokeWidth={1.75} />
+                              Protected
+                            </span>
                           )}
                           {m.timeLimit > 0 && (
-                            <>
-                              <span>•</span>
-                              <span className="flex items-center gap-1 text-indigo-600">
-                                <Timer className="h-3 w-3" />
-                                {m.timeLimit}min
-                              </span>
-                            </>
+                            <span className="flex items-center gap-1">
+                              <Timer className="h-3 w-3" strokeWidth={1.75} />
+                              {m.timeLimit} min
+                            </span>
                           )}
                           {m.maxParticipants > 0 && (
-                            <>
-                              <span>•</span>
-                              <span className="flex items-center gap-1 text-cyan-600">
-                                <Users className="h-3 w-3" />
-                                Max {m.maxParticipants}
-                              </span>
-                            </>
+                            <span className="flex items-center gap-1">
+                              <Users className="h-3 w-3" strokeWidth={1.75} />
+                              Max {m.maxParticipants}
+                            </span>
                           )}
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleMeetingStatus(m.meetingId, m.status)}
-                        disabled={m.status === "ended"}
-                        className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
-                          m.status === "inactive"
-                            ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                            : "border-amber-200 text-amber-700 hover:bg-amber-50"
-                        } disabled:cursor-not-allowed disabled:opacity-50`}
-                        title={
-                          m.status === "ended"
-                            ? "Ended meetings cannot be reactivated"
-                            : m.status === "inactive"
-                              ? "Activate Meeting"
-                              : "Deactivate Meeting"
-                        }
-                      >
-                        <Power className="h-3.5 w-3.5" />
-                        <span>
+                      <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:items-center">
+                        <button
+                          type="button"
+                          onClick={() => copyMeetingId(m.meetingId)}
+                          className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-hairline px-3 text-xs font-medium text-ink-2 transition-colors duration-150 hover:bg-raised hover:text-ink"
+                        >
+                          {copiedId === m.meetingId ? (
+                            <>
+                              <Check className="h-3.5 w-3.5" strokeWidth={1.75} />
+                              Copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" strokeWidth={1.75} />
+                              Copy ID
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleMeetingStatus(m.meetingId, m.status)}
+                          disabled={m.status === "ended"}
+                          title={
+                            m.status === "ended"
+                              ? "Ended meetings cannot be reactivated"
+                              : m.status === "inactive"
+                                ? "Activate meeting"
+                                : "Deactivate meeting"
+                          }
+                          className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-hairline px-3 text-xs font-medium text-ink-2 transition-colors duration-150 hover:bg-raised hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Power className="h-3.5 w-3.5" strokeWidth={1.75} />
                           {m.status === "ended"
                             ? "Ended"
                             : m.status === "inactive"
                               ? "Activate"
                               : "Deactivate"}
-                        </span>
-                      </button>
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => deleteMeeting(m.meetingId)}
-                        className="flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                        title="Delete Meeting"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteMeeting(m.meetingId)}
+                          aria-label="Delete meeting"
+                          className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-hairline px-3 text-xs font-medium text-negative transition-colors duration-150 hover:bg-negative/5"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} />
+                          <span className="sm:sr-only">Delete</span>
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => copyMeetingId(m.meetingId)}
-                        className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                      >
-                        {copiedId === m.meetingId ? (
-                          <>
-                            <Check className="h-3.5 w-3.5 text-emerald-600" />
-                            <span className="text-emerald-600 font-bold">Copied!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-3.5 w-3.5 text-slate-400" />
-                            <span>Copy ID</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={m.status === "inactive" || m.status === "ended"}
-                        onClick={() => router.push(`/meeting/${m.meetingId}`)}
-                        className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Video className="h-3.5 w-3.5" />
-                        <span>Join</span>
-                      </button>
+                        <button
+                          type="button"
+                          disabled={m.status === "inactive" || m.status === "ended"}
+                          onClick={() => router.push(`/meeting/${m.meetingId}`)}
+                          className="flex h-9 items-center justify-center gap-1.5 rounded-lg bg-brand px-4 text-xs font-medium text-white transition-colors duration-150 hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Video className="h-3.5 w-3.5" strokeWidth={1.75} />
+                          Join
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
               })
             ) : (
-              <div className="rounded-3xl border border-dashed border-slate-300 bg-white/50 p-12 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                  <Video className="h-7 w-7" />
-                </div>
-                <h3 className="mt-4 text-base font-bold text-slate-900">
-                  No meetings created yet
+              <div className="rounded-xl border border-dashed border-hairline bg-surface px-6 py-12 text-center">
+                <Video className="mx-auto h-5 w-5 text-ink-3" strokeWidth={1.5} />
+                <h3 className="mt-3 text-[15px] font-medium text-ink">
+                  No meetings yet
                 </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Use the card above to host your first video conference in seconds.
+                <p className="mt-1 text-[13px] text-ink-2">
+                  Use the form above to open your first room.
                 </p>
               </div>
             )}
